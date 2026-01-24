@@ -1,0 +1,67 @@
+{
+  "nav": {
+    "joinBeta": "Join Beta"
+  },
+  "hero": {
+    "badge": "Beta launching soon",
+    "title1": "Train with",
+    "title2": "precision",
+    "subtitle": "ROTA is the workout app for people who want structure, not chaos. Follow proven programs. Execute with clarity. Progress with purpose.",
+    "cta": "Get Early Access",
+    "learnMore": "Learn More"
+  },
+  "stats": {
+    "programs": "Programs",
+    "exercises": "Exercises",
+    "distractions": "Distractions",
+    "gains": "Gains"
+  },
+  "features": {
+    "title1": "Everything you need.",
+    "title2": "Nothing you don't.",
+    "subtitle": "Built for focused training. No social feeds, no gamification tricks, no bloat. Just the tools to get stronger.",
+    "smartPrograms": {
+      "title": "Smart Programs",
+      "description": "Choose from battle-tested programs or let ROTA build one based on your goals, experience, and equipment."
+    },
+    "cleanSession": {
+      "title": "Clean Session View",
+      "description": "Large, tappable buttons. Clear set/rep targets. Automatic rest timers. Zero friction while training."
+    },
+    "progressive": {
+      "title": "Progressive Overload",
+      "description": "Automatic weight progression based on your performance. Hit your reps? ROTA increases the load."
+    },
+    "restTimers": {
+      "title": "Rest Timers",
+      "description": "Configurable rest periods with haptic feedback. Stay focused without watching the clock."
+    },
+    "history": {
+      "title": "Workout History",
+      "description": "Every set logged. Every PR tracked. Simple visualizations that show real progress."
+    },
+    "offline": {
+      "title": "Offline First",
+      "description": "Full functionality without internet. Your gym's wifi can stay terrible."
+    }
+  },
+  "philosophy": {
+    "label": "The ROTA Philosophy",
+    "quote": "The best workout app is the one that gets out of your way and lets you",
+    "highlight": "do the work",
+    "tagline": "Built on discipline"
+  },
+  "beta": {
+    "title": "Be first in line",
+    "subtitle": "Join the beta waitlist and get early access when we launch. No spam, just one email when it's time.",
+    "placeholder": "Enter your email",
+    "button": "Join Waitlist",
+    "success": "You're on the list. We'll be in touch."
+  },
+  "footer": {
+    "rights": "All rights reserved.",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "contact": "Contact"
+  }
+}

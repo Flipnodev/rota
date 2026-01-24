@@ -1,0 +1,48 @@
+{
+  "library": {
+    "title": "Programs",
+    "subtitle": "Choose a program to start your journey",
+    "myPrograms": "My Programs",
+    "templates": "Templates",
+    "browse": "Browse All",
+    "recommended": "Recommended for You",
+    "popular": "Popular",
+    "new": "New"
+  },
+  "details": {
+    "overview": "Overview",
+    "schedule": "Schedule",
+    "exercises": "Exercises",
+    "startProgram": "Start Program",
+    "continueProgram": "Continue Program",
+    "restartProgram": "Restart Program",
+    "weeks": "{{count}} weeks",
+    "daysPerWeek": "{{count}} days/week",
+    "difficulty": "Difficulty",
+    "equipment": "Equipment needed",
+    "goal": "Goal"
+  },
+  "difficulty": {
+    "beginner": "Beginner",
+    "intermediate": "Intermediate",
+    "advanced": "Advanced"
+  },
+  "goals": {
+    "strength": "Strength",
+    "hypertrophy": "Hypertrophy",
+    "endurance": "Endurance",
+    "general": "General Fitness"
+  },
+  "progress": {
+    "week": "Week {{current}} of {{total}}",
+    "completed": "{{percent}}% Complete",
+    "workoutsLeft": "{{count}} workouts left this week",
+    "onTrack": "You're on track!",
+    "behindSchedule": "You're a bit behind",
+    "aheadOfSchedule": "You're ahead of schedule!"
+  },
+  "empty": {
+    "noPrograms": "No programs yet",
+    "browseTemplates": "Browse our templates to get started"
+  }
+}

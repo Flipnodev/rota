@@ -1,0 +1,67 @@
+{
+  "nav": {
+    "joinBeta": "Gå med i beta"
+  },
+  "hero": {
+    "badge": "Beta lanseras snart",
+    "title1": "Träna med",
+    "title2": "precision",
+    "subtitle": "ROTA är träningsappen för dig som vill ha struktur, inte kaos. Följ beprövade program. Utför med klarhet. Utvecklas med syfte.",
+    "cta": "Få tidig tillgång",
+    "learnMore": "Läs mer"
+  },
+  "stats": {
+    "programs": "Program",
+    "exercises": "Övningar",
+    "distractions": "Distraktioner",
+    "gains": "Framsteg"
+  },
+  "features": {
+    "title1": "Allt du behöver.",
+    "title2": "Inget du inte behöver.",
+    "subtitle": "Byggt för fokuserad träning. Inga sociala flöden, inga gamification-trick, ingen uppsvälldhet. Bara verktygen för att bli starkare.",
+    "smartPrograms": {
+      "title": "Smarta program",
+      "description": "Välj från beprövade program eller låt ROTA bygga ett baserat på dina mål, erfarenhet och utrustning."
+    },
+    "cleanSession": {
+      "title": "Ren sessionsvy",
+      "description": "Stora, tryckbara knappar. Tydliga set/rep-mål. Automatiska vilotimers. Noll friktion under träning."
+    },
+    "progressive": {
+      "title": "Progressiv överbelastning",
+      "description": "Automatisk viktprogression baserad på din prestation. Klarade du reps? ROTA ökar vikten."
+    },
+    "restTimers": {
+      "title": "Vilotimers",
+      "description": "Konfigurerbara viloperioder med haptisk feedback. Håll fokus utan att titta på klockan."
+    },
+    "history": {
+      "title": "Träningshistorik",
+      "description": "Varje set loggat. Varje PR spårat. Enkla visualiseringar som visar verklig progress."
+    },
+    "offline": {
+      "title": "Offline först",
+      "description": "Full funktionalitet utan internet. Ditt gyms wifi kan fortsätta vara uselt."
+    }
+  },
+  "philosophy": {
+    "label": "ROTA-filosofin",
+    "quote": "Den bästa träningsappen är den som kommer ur vägen och låter dig",
+    "highlight": "göra jobbet",
+    "tagline": "Byggd på disciplin"
+  },
+  "beta": {
+    "title": "Var först i kön",
+    "subtitle": "Gå med på beta-väntelistan och få tidig tillgång när vi lanserar. Ingen spam, bara ett mejl när det är dags.",
+    "placeholder": "Ange din e-post",
+    "button": "Gå med på väntelistan",
+    "success": "Du är på listan. Vi hör av oss."
+  },
+  "footer": {
+    "rights": "Alla rättigheter förbehållna.",
+    "privacy": "Integritet",
+    "terms": "Villkor",
+    "contact": "Kontakt"
+  }
+}

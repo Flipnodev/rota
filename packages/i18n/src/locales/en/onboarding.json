@@ -1,0 +1,59 @@
+{
+  "welcome": {
+    "title": "Welcome to ROTA",
+    "subtitle": "Let's set up your training profile",
+    "getStarted": "Get Started"
+  },
+  "goal": {
+    "title": "What's your goal?",
+    "subtitle": "This helps us recommend the right programs",
+    "options": {
+      "strength": "Build Strength",
+      "strengthDesc": "Focus on getting stronger with heavy compound lifts",
+      "hypertrophy": "Build Muscle",
+      "hypertrophyDesc": "Focus on muscle growth and aesthetics",
+      "endurance": "Build Endurance",
+      "enduranceDesc": "Focus on muscular endurance and conditioning",
+      "general": "General Fitness",
+      "generalDesc": "A balanced approach to overall fitness"
+    }
+  },
+  "experience": {
+    "title": "What's your experience level?",
+    "subtitle": "Be honest – we'll match you with appropriate programs",
+    "options": {
+      "beginner": "Beginner",
+      "beginnerDesc": "New to structured training (< 1 year)",
+      "intermediate": "Intermediate",
+      "intermediateDesc": "Consistent training experience (1-3 years)",
+      "advanced": "Advanced",
+      "advancedDesc": "Extensive training background (3+ years)"
+    }
+  },
+  "frequency": {
+    "title": "How many days can you train?",
+    "subtitle": "Per week, realistically",
+    "daysPerWeek": "{{count}} days per week"
+  },
+  "equipment": {
+    "title": "What equipment do you have?",
+    "subtitle": "Select all that apply",
+    "options": {
+      "barbell": "Barbell",
+      "dumbbell": "Dumbbells",
+      "kettlebell": "Kettlebells",
+      "cable": "Cable Machine",
+      "machine": "Machines",
+      "bodyweight": "Bodyweight Only",
+      "resistance_band": "Resistance Bands",
+      "bench": "Bench",
+      "pull_up_bar": "Pull-up Bar"
+    },
+    "fullGym": "I have access to a full gym"
+  },
+  "complete": {
+    "title": "You're all set!",
+    "subtitle": "We've found programs that match your profile",
+    "viewPrograms": "View Programs"
+  }
+}

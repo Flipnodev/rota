@@ -1,0 +1,65 @@
+{
+  "session": {
+    "title": "Workout",
+    "startWorkout": "Start Workout",
+    "finishWorkout": "Finish Workout",
+    "cancelWorkout": "Cancel Workout",
+    "resumeWorkout": "Resume Workout",
+    "workoutComplete": "Workout Complete!",
+    "greatJob": "Great job! You crushed it.",
+    "duration": "Duration",
+    "totalVolume": "Total Volume",
+    "setsCompleted": "Sets Completed",
+    "exercises": "Exercises"
+  },
+  "exercise": {
+    "sets": "{{count}} sets",
+    "reps": "{{count}} reps",
+    "weight": "{{weight}} {{unit}}",
+    "targetReps": "Target: {{count}} reps",
+    "targetWeight": "Target: {{weight}} {{unit}}",
+    "restTime": "Rest: {{time}}",
+    "previousBest": "Previous: {{weight}} {{unit}} × {{reps}}",
+    "notes": "Notes",
+    "addNote": "Add note...",
+    "swapExercise": "Swap Exercise",
+    "skipExercise": "Skip Exercise"
+  },
+  "set": {
+    "set": "Set {{number}}",
+    "warmup": "Warm-up",
+    "working": "Working",
+    "dropset": "Drop set",
+    "failure": "To failure",
+    "completed": "Completed",
+    "skipped": "Skipped",
+    "logSet": "Log Set",
+    "rpe": "RPE",
+    "rir": "RIR"
+  },
+  "rest": {
+    "title": "Rest",
+    "timeRemaining": "{{time}} remaining",
+    "skipRest": "Skip Rest",
+    "addTime": "+30s",
+    "nextUp": "Next up"
+  },
+  "history": {
+    "title": "History",
+    "thisWeek": "This Week",
+    "lastWeek": "Last Week",
+    "earlier": "Earlier",
+    "viewDetails": "View Details",
+    "noHistory": "No workout history yet",
+    "startFirst": "Complete your first workout to see it here"
+  },
+  "stats": {
+    "totalWorkouts": "Total Workouts",
+    "totalVolume": "Total Volume",
+    "avgDuration": "Avg. Duration",
+    "currentStreak": "Current Streak",
+    "longestStreak": "Longest Streak",
+    "personalRecords": "Personal Records",
+    "newPR": "New PR!"
+  }
+}

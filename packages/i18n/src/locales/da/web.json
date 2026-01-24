@@ -1,0 +1,67 @@
+{
+  "nav": {
+    "joinBeta": "Tilmeld beta"
+  },
+  "hero": {
+    "badge": "Beta lanceres snart",
+    "title1": "Træn med",
+    "title2": "præcision",
+    "subtitle": "ROTA er træningsappen for dem, der ønsker struktur, ikke kaos. Følg gennemprøvede programmer. Udfør med klarhed. Progrider med formål.",
+    "cta": "Få tidlig adgang",
+    "learnMore": "Læs mere"
+  },
+  "stats": {
+    "programs": "Programmer",
+    "exercises": "Øvelser",
+    "distractions": "Distraktioner",
+    "gains": "Fremskridt"
+  },
+  "features": {
+    "title1": "Alt hvad du har brug for.",
+    "title2": "Intet du ikke har brug for.",
+    "subtitle": "Bygget til fokuseret træning. Ingen sociale feeds, ingen gamification-tricks, ingen oppustethed. Bare værktøjerne til at blive stærkere.",
+    "smartPrograms": {
+      "title": "Smarte programmer",
+      "description": "Vælg fra gennemprøvede programmer eller lad ROTA bygge et baseret på dine mål, erfaring og udstyr."
+    },
+    "cleanSession": {
+      "title": "Ren sessionsvisning",
+      "description": "Store, trykbare knapper. Klare sæt/rep-mål. Automatiske hviletimere. Nul friktion under træning."
+    },
+    "progressive": {
+      "title": "Progressiv overbelastning",
+      "description": "Automatisk vægtprogression baseret på din præstation. Ramte du reps? ROTA øger vægten."
+    },
+    "restTimers": {
+      "title": "Hviletimere",
+      "description": "Konfigurerbare hvileperioder med haptisk feedback. Hold fokus uden at kigge på uret."
+    },
+    "history": {
+      "title": "Træningshistorik",
+      "description": "Hvert sæt logget. Hver PR sporet. Enkle visualiseringer der viser reel fremgang."
+    },
+    "offline": {
+      "title": "Offline først",
+      "description": "Fuld funktionalitet uden internet. Dit centers wifi kan blive ved med at være elendig."
+    }
+  },
+  "philosophy": {
+    "label": "ROTA-filosofien",
+    "quote": "Den bedste træningsapp er den, der kommer af vejen og lader dig",
+    "highlight": "gøre arbejdet",
+    "tagline": "Bygget på disciplin"
+  },
+  "beta": {
+    "title": "Vær først i køen",
+    "subtitle": "Tilmeld dig beta-ventelisten og få tidlig adgang, når vi lancerer. Ingen spam, bare én e-mail, når tiden er inde.",
+    "placeholder": "Indtast din e-mail",
+    "button": "Tilmeld ventelisten",
+    "success": "Du er på listen. Vi kontakter dig."
+  },
+  "footer": {
+    "rights": "Alle rettigheder forbeholdes.",
+    "privacy": "Privatliv",
+    "terms": "Vilkår",
+    "contact": "Kontakt"
+  }
+}

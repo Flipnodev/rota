@@ -1,0 +1,64 @@
+{
+  "app": {
+    "name": "ROTA",
+    "tagline": "Precision training. Built on discipline."
+  },
+  "nav": {
+    "home": "Home",
+    "programs": "Programs",
+    "workout": "Workout",
+    "history": "History",
+    "settings": "Settings",
+    "profile": "Profile"
+  },
+  "actions": {
+    "start": "Start",
+    "stop": "Stop",
+    "pause": "Pause",
+    "resume": "Resume",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "done": "Done",
+    "skip": "Skip",
+    "next": "Next",
+    "back": "Back",
+    "continue": "Continue",
+    "retry": "Retry",
+    "close": "Close"
+  },
+  "time": {
+    "seconds": "{{count}} sec",
+    "minutes": "{{count}} min",
+    "hours": "{{count}} hr",
+    "days": "{{count}} day",
+    "days_plural": "{{count}} days",
+    "weeks": "{{count}} week",
+    "weeks_plural": "{{count}} weeks",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "thisWeek": "This week",
+    "lastWeek": "Last week"
+  },
+  "units": {
+    "kg": "kg",
+    "lbs": "lbs",
+    "reps": "reps",
+    "sets": "sets"
+  },
+  "status": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "error": "Something went wrong",
+    "success": "Success",
+    "offline": "You're offline",
+    "syncing": "Syncing..."
+  },
+  "empty": {
+    "noData": "No data yet",
+    "noWorkouts": "No workouts yet",
+    "noPrograms": "No programs available"
+  }
+}

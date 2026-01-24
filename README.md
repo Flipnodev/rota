@@ -41,17 +41,19 @@ This repository is the home of the **ROTA** product.
 
 ---
 
-## Repository Structure (suggested)
+## Repository Structure
 ```text
 .
 ├─ apps/
-│  ├─ mobile/        # Expo app
-│  └─ web/           # Next.js landing (later: web app)
+│  ├─ mobile/        # Expo app (React Native)
+│  └─ web/           # Next.js landing page
 ├─ packages/
 │  ├─ ui/            # shared UI components
 │  ├─ utils/         # shared utilities
 │  └─ types/         # shared TypeScript types
-├─ docs/             # product + architecture docs
+├─ projectdocs/      # product documentation
+├─ turbo.json        # Turborepo configuration
+├─ pnpm-workspace.yaml
 └─ README.md
 ```
 
@@ -71,15 +73,22 @@ pnpm install
 
 ### Run Mobile (Expo)
 ```bash
-pnpm --filter mobile start
+pnpm mobile
+# or
+pnpm --filter @rota/mobile start
 ```
 
 ### Run Web (Next.js)
 ```bash
-pnpm --filter web dev
+pnpm web
+# or
+pnpm --filter @rota/web dev
 ```
 
-> If your folder names differ from the suggested structure, adjust the commands accordingly.
+### Run All (development)
+```bash
+pnpm dev
+```
 
 ---
 

@@ -1,0 +1,74 @@
+{
+  "title": "Settings",
+  "sections": {
+    "account": "Account",
+    "preferences": "Preferences",
+    "workout": "Workout",
+    "notifications": "Notifications",
+    "data": "Data & Privacy",
+    "support": "Support",
+    "about": "About"
+  },
+  "account": {
+    "profile": "Profile",
+    "email": "Email",
+    "password": "Password",
+    "changePassword": "Change Password",
+    "subscription": "Subscription",
+    "manageSub": "Manage Subscription",
+    "signOut": "Sign Out",
+    "deleteAccount": "Delete Account"
+  },
+  "preferences": {
+    "language": "Language",
+    "units": "Units",
+    "metric": "Metric (kg)",
+    "imperial": "Imperial (lbs)",
+    "theme": "Theme",
+    "themeSystem": "System",
+    "themeLight": "Light",
+    "themeDark": "Dark"
+  },
+  "workout": {
+    "defaultRestTime": "Default Rest Time",
+    "restTimerSound": "Rest Timer Sound",
+    "restTimerVibration": "Rest Timer Vibration",
+    "autoStartRest": "Auto-start Rest Timer",
+    "keepScreenOn": "Keep Screen On",
+    "showPreviousPerformance": "Show Previous Performance"
+  },
+  "notifications": {
+    "workoutReminders": "Workout Reminders",
+    "reminderTime": "Reminder Time",
+    "restDayReminders": "Rest Day Reminders",
+    "progressUpdates": "Progress Updates",
+    "appUpdates": "App Updates"
+  },
+  "data": {
+    "exportData": "Export Data",
+    "importData": "Import Data",
+    "syncStatus": "Sync Status",
+    "lastSync": "Last synced: {{time}}",
+    "clearCache": "Clear Cache",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
+  },
+  "support": {
+    "helpCenter": "Help Center",
+    "contactUs": "Contact Us",
+    "reportBug": "Report a Bug",
+    "sendFeedback": "Send Feedback",
+    "rateApp": "Rate ROTA"
+  },
+  "about": {
+    "version": "Version {{version}}",
+    "licenses": "Open Source Licenses",
+    "credits": "Credits"
+  },
+  "languages": {
+    "en": "English",
+    "no": "Norsk",
+    "sv": "Svenska",
+    "da": "Dansk"
+  }
+}

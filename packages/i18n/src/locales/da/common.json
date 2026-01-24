@@ -1,0 +1,40 @@
+{
+  "app": {
+    "name": "ROTA",
+    "tagline": "Præcisionstræning. Bygget på disciplin."
+  },
+  "nav": {
+    "home": "Hjem",
+    "programs": "Programmer",
+    "workout": "Træning",
+    "history": "Historik",
+    "settings": "Indstillinger",
+    "profile": "Profil"
+  },
+  "actions": {
+    "start": "Start",
+    "stop": "Stop",
+    "pause": "Pause",
+    "resume": "Genoptag",
+    "save": "Gem",
+    "cancel": "Annuller",
+    "confirm": "Bekræft",
+    "delete": "Slet",
+    "edit": "Rediger",
+    "done": "Færdig",
+    "skip": "Spring over",
+    "next": "Næste",
+    "back": "Tilbage",
+    "continue": "Fortsæt",
+    "retry": "Prøv igen",
+    "close": "Luk"
+  },
+  "status": {
+    "loading": "Indlæser...",
+    "saving": "Gemmer...",
+    "error": "Noget gik galt",
+    "success": "Succes",
+    "offline": "Du er offline",
+    "syncing": "Synkroniserer..."
+  }
+}
