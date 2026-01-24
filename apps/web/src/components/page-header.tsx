@@ -18,7 +18,7 @@ export function PageHeader() {
           href="/"
           className="text-2xl font-bold tracking-tight hover:opacity-80 transition-opacity"
         >
-          ROTAFIT
+          ROTA
         </Link>
         <div className="flex items-center gap-4">
           <Link
