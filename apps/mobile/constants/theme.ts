@@ -35,6 +35,10 @@ export const colors = {
   warning: "#f59e0b",
   success: "#10b981",
 
+  // Premium/Gold
+  amber500: "#f59e0b",
+  amber400: "#fbbf24",
+
   // Transparency helpers
   whiteAlpha5: "rgba(255, 255, 255, 0.05)",
   whiteAlpha10: "rgba(255, 255, 255, 0.10)",

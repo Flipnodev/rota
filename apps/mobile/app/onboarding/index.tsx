@@ -1,18 +1,30 @@
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
-import { ChevronRight, ChevronLeft, Target, Dumbbell, Calendar, Check } from "@/components/icons";
-
-const ONBOARDING_COMPLETE_KEY = "@rota/onboarding_complete";
-const USER_PREFERENCES_KEY = "@rota/user_preferences";
+import {
+  ChevronRight,
+  ChevronLeft,
+  Target,
+  Dumbbell,
+  Calendar,
+  Check,
+} from "@/components/icons";
+import { useDatabase } from "@/providers/database-provider";
+import { useAuth } from "@/providers/auth-provider";
 
 type Step = "welcome" | "goals" | "experience" | "equipment" | "schedule" | "complete";
 
-const STEPS: Step[] = ["welcome", "goals", "experience", "equipment", "schedule", "complete"];
+const STEPS: Step[] = [
+  "welcome",
+  "goals",
+  "experience",
+  "equipment",
+  "schedule",
+  "complete",
+];
 
 const GOALS = [
   { id: "strength", label: "Build Strength", icon: Target },
@@ -22,14 +34,26 @@ const GOALS = [
 ];
 
 const EXPERIENCE = [
-  { id: "beginner", label: "Beginner", description: "New to strength training" },
-  { id: "intermediate", label: "Intermediate", description: "1-2 years of training" },
+  {
+    id: "beginner",
+    label: "Beginner",
+    description: "New to strength training",
+  },
+  {
+    id: "intermediate",
+    label: "Intermediate",
+    description: "1-2 years of training",
+  },
   { id: "advanced", label: "Advanced", description: "3+ years of training" },
 ];
 
 const EQUIPMENT = [
   { id: "full", label: "Full Gym", description: "Access to all equipment" },
-  { id: "basic", label: "Basic Gym", description: "Barbells, dumbbells, cables" },
+  {
+    id: "basic",
+    label: "Basic Gym",
+    description: "Barbells, dumbbells, cables",
+  },
   { id: "home", label: "Home Gym", description: "Limited equipment at home" },
   { id: "none", label: "Bodyweight Only", description: "No equipment needed" },
 ];
@@ -43,11 +67,18 @@ const SCHEDULE = [
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { supabase } = useDatabase();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<Step>("welcome");
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
-  const [selectedExperience, setSelectedExperience] = useState<string | null>(null);
-  const [selectedEquipment, setSelectedEquipment] = useState<string | null>(null);
+  const [selectedExperience, setSelectedExperience] = useState<string | null>(
+    null
+  );
+  const [selectedEquipment, setSelectedEquipment] = useState<string | null>(
+    null
+  );
   const [selectedSchedule, setSelectedSchedule] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const currentIndex = STEPS.indexOf(currentStep);
   const isFirstStep = currentIndex === 0;
@@ -74,22 +105,43 @@ export default function OnboardingScreen() {
 
   const handleNext = async () => {
     if (isLastStep) {
-      // Save user preferences and mark onboarding as complete
+      // Save user preferences to Supabase profile
+      setIsSaving(true);
       try {
-        await AsyncStorage.setItem(
-          USER_PREFERENCES_KEY,
-          JSON.stringify({
-            goal: selectedGoal,
-            experience: selectedExperience,
-            equipment: selectedEquipment,
-            schedule: selectedSchedule,
+        if (!user?.id) {
+          throw new Error("No user logged in");
+        }
+
+        const onboardingData = {
+          fitness_goal: selectedGoal,
+          experience_level: selectedExperience,
+          available_equipment: selectedEquipment,
+          preferred_schedule: selectedSchedule,
+        };
+
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            onboarding_completed: true,
+            onboarding_data: onboardingData,
           })
-        );
-        await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, "true");
+          .eq("id", user.id);
+
+        if (error) {
+          throw error;
+        }
+
+        router.replace("/(tabs)");
       } catch (error) {
         console.error("Failed to save onboarding data:", error);
+        Alert.alert(
+          "Error",
+          "Failed to save your preferences. Please try again.",
+          [{ text: "OK" }]
+        );
+      } finally {
+        setIsSaving(false);
       }
-      router.replace("/(tabs)");
     } else {
       setCurrentStep(STEPS[currentIndex + 1]);
     }
@@ -139,7 +191,11 @@ export default function OnboardingScreen() {
                 >
                   <goal.icon
                     size={24}
-                    color={selectedGoal === goal.id ? colors.emerald500 : colors.zinc400}
+                    color={
+                      selectedGoal === goal.id
+                        ? colors.emerald500
+                        : colors.zinc400
+                    }
                   />
                   <Text
                     style={[
@@ -181,12 +237,15 @@ export default function OnboardingScreen() {
                     <Text
                       style={[
                         styles.optionLabel,
-                        selectedExperience === exp.id && styles.optionLabelSelected,
+                        selectedExperience === exp.id &&
+                          styles.optionLabelSelected,
                       ]}
                     >
                       {exp.label}
                     </Text>
-                    <Text style={styles.optionDescription}>{exp.description}</Text>
+                    <Text style={styles.optionDescription}>
+                      {exp.description}
+                    </Text>
                   </View>
                   {selectedExperience === exp.id && (
                     <View style={styles.checkCircle}>
@@ -220,12 +279,15 @@ export default function OnboardingScreen() {
                     <Text
                       style={[
                         styles.optionLabel,
-                        selectedEquipment === eq.id && styles.optionLabelSelected,
+                        selectedEquipment === eq.id &&
+                          styles.optionLabelSelected,
                       ]}
                     >
                       {eq.label}
                     </Text>
-                    <Text style={styles.optionDescription}>{eq.description}</Text>
+                    <Text style={styles.optionDescription}>
+                      {eq.description}
+                    </Text>
                   </View>
                   {selectedEquipment === eq.id && (
                     <View style={styles.checkCircle}>
@@ -259,12 +321,15 @@ export default function OnboardingScreen() {
                     <Text
                       style={[
                         styles.optionLabel,
-                        selectedSchedule === sched.id && styles.optionLabelSelected,
+                        selectedSchedule === sched.id &&
+                          styles.optionLabelSelected,
                       ]}
                     >
                       {sched.label}
                     </Text>
-                    <Text style={styles.optionDescription}>{sched.description}</Text>
+                    <Text style={styles.optionDescription}>
+                      {sched.description}
+                    </Text>
                   </View>
                   {selectedSchedule === sched.id && (
                     <View style={styles.checkCircle}>
@@ -285,7 +350,8 @@ export default function OnboardingScreen() {
             </View>
             <Text style={styles.completeTitle}>You're all set!</Text>
             <Text style={styles.completeSubtitle}>
-              Based on your preferences, we've found the perfect programs for you.
+              Based on your preferences, we've found the perfect programs for
+              you.
             </Text>
             <View style={styles.summaryCard}>
               <View style={styles.summaryItem}>
@@ -351,15 +417,21 @@ export default function OnboardingScreen() {
         <Pressable
           style={[
             styles.nextButton,
-            !canProceed() && styles.nextButtonDisabled,
+            (!canProceed() || isSaving) && styles.nextButtonDisabled,
           ]}
           onPress={handleNext}
-          disabled={!canProceed()}
+          disabled={!canProceed() || isSaving}
         >
           <Text style={styles.nextButtonText}>
-            {isLastStep ? "Get Started" : "Continue"}
+            {isSaving
+              ? "Saving..."
+              : isLastStep
+              ? "Get Started"
+              : "Continue"}
           </Text>
-          {!isLastStep && <ChevronRight size={20} color={colors.black} />}
+          {!isLastStep && !isSaving && (
+            <ChevronRight size={20} color={colors.black} />
+          )}
         </Pressable>
       </View>
     </SafeAreaView>

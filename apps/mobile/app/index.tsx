@@ -1,44 +1,61 @@
 import { useEffect, useState } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter, useRootNavigationState } from "expo-router";
 
 import { colors } from "@/constants/theme";
-
-const ONBOARDING_COMPLETE_KEY = "@rota/onboarding_complete";
-
-// Set to true to always show onboarding (for development)
-const DEV_ALWAYS_SHOW_ONBOARDING = true;
+import { useAuth } from "@/providers/auth-provider";
+import { supabase } from "@/lib/supabase";
+import type { Profile } from "@rota/database";
 
 export default function InitialScreen() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
+  const rootNavigationState = useRootNavigationState();
+  const { user, loading: authLoading } = useAuth();
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    checkOnboardingStatus();
-  }, []);
+    // Wait for the navigation state to be ready before navigating
+    if (!rootNavigationState?.key) return;
 
-  const checkOnboardingStatus = async () => {
+    // Wait for auth to finish loading
+    if (authLoading) return;
+
+    checkAuthAndOnboardingStatus();
+  }, [rootNavigationState?.key, authLoading, user]);
+
+  const checkAuthAndOnboardingStatus = async () => {
     try {
-      if (DEV_ALWAYS_SHOW_ONBOARDING) {
+      // If not authenticated, redirect to sign in
+      if (!user) {
+        router.replace("/auth/sign-in");
+        return;
+      }
+
+      // User is authenticated, check onboarding status from Supabase profiles table
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("onboarding_completed")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        // If profile doesn't exist or error, assume not onboarded
+        console.warn("Error fetching profile:", error.message);
         router.replace("/onboarding");
         return;
       }
 
-      const hasCompletedOnboarding = await AsyncStorage.getItem(
-        ONBOARDING_COMPLETE_KEY
-      );
-
-      if (hasCompletedOnboarding === "true") {
+      if (profile?.onboarding_completed) {
         router.replace("/(tabs)");
       } else {
         router.replace("/onboarding");
       }
     } catch (error) {
-      // If there's an error, default to onboarding
+      // If there's an error, default to onboarding for authenticated users
+      console.warn("Error checking onboarding status:", error);
       router.replace("/onboarding");
     } finally {
-      setIsLoading(false);
+      setIsChecking(false);
     }
   };
 

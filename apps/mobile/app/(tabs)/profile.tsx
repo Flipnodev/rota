@@ -1,16 +1,33 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-
-import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
 import {
-  User,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import {
+  Calendar,
+  ChevronRight,
   Settings,
   Target,
   TrendingUp,
-  ChevronRight,
-  Calendar,
+  User,
 } from "@/components/icons";
+import {
+  colors,
+  fontSize,
+  fontWeight,
+  radius,
+  spacing,
+} from "@/constants/theme";
+import { useProfile } from "@/hooks/use-profile";
+import { useWorkoutLogs } from "@/hooks/use-workout-logs";
+import { useAuth } from "@/providers/auth-provider";
 
 const MENU_ITEMS = [
   {
@@ -30,8 +47,67 @@ const MENU_ITEMS = [
   },
 ];
 
+function getInitials(name: string | null, email: string | null): string {
+  if (name) {
+    const parts = name.split(" ");
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  }
+  if (email) {
+    return email.slice(0, 2).toUpperCase();
+  }
+  return "??";
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
+  const { profile, isLoading: profileLoading } = useProfile();
+  const { stats, isLoading: logsLoading } = useWorkoutLogs();
+  const { signOut, loading: authLoading } = useAuth();
+
+  const isLoading = profileLoading || logsLoading;
+
+  const handleSignOut = async () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const { error } = await signOut();
+            if (error) {
+              Alert.alert("Error", "Failed to sign out. Please try again.");
+            } else {
+              router.replace("/auth");
+            }
+          } catch (err) {
+            Alert.alert("Error", "Failed to sign out. Please try again.");
+          }
+        },
+      },
+    ]);
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.emerald500} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const displayName =
+    profile?.display_name || profile?.email?.split("@")[0] || "User";
+  const email = profile?.email || "";
+  const initials = getInitials(
+    profile?.display_name || null,
+    profile?.email || null,
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -44,31 +120,28 @@ export default function ProfileScreen() {
         {/* User Card */}
         <View style={styles.userCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>JD</Text>
+            <Text style={styles.avatarText}>{initials}</Text>
           </View>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>John Doe</Text>
-            <Text style={styles.userEmail}>john@example.com</Text>
+            <Text style={styles.userName}>{displayName}</Text>
+            <Text style={styles.userEmail}>{email}</Text>
           </View>
-          <Pressable style={styles.editButton}>
-            <Text style={styles.editButtonText}>Edit</Text>
-          </Pressable>
         </View>
 
         {/* Stats Summary */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>127</Text>
+            <Text style={styles.statValue}>{stats.totalWorkouts}</Text>
             <Text style={styles.statLabel}>Workouts</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>12</Text>
-            <Text style={styles.statLabel}>Programs</Text>
+            <Text style={styles.statValue}>{stats.thisMonth}</Text>
+            <Text style={styles.statLabel}>This Month</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>89</Text>
+            <Text style={styles.statValue}>{stats.streak}</Text>
             <Text style={styles.statLabel}>Day Streak</Text>
           </View>
         </View>
@@ -85,9 +158,7 @@ export default function ProfileScreen() {
                     styles.menuItem,
                     index < section.items.length - 1 && styles.menuItemBorder,
                   ]}
-                  onPress={() => {
-                    // Navigation placeholder
-                  }}
+                  onPress={() => router.push(item.route as any)}
                 >
                   <View style={styles.menuItemIcon}>
                     <item.icon size={20} color={colors.zinc400} />
@@ -101,8 +172,14 @@ export default function ProfileScreen() {
         ))}
 
         {/* Logout Button */}
-        <Pressable style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Sign Out</Text>
+        <Pressable
+          style={styles.logoutButton}
+          onPress={handleSignOut}
+          disabled={authLoading}
+        >
+          <Text style={styles.logoutText}>
+            {authLoading ? "Signing out..." : "Sign Out"}
+          </Text>
         </Pressable>
 
         {/* App Version */}
@@ -116,6 +193,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.black,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   scroll: {
     flex: 1,

@@ -1,0 +1,10 @@
+# Supabase local
+.branches
+.temp
+
+# Build
+dist/
+
+# Environment
+.env
+.env.local

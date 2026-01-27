@@ -1,23 +1,42 @@
 import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
 import { Check, Clock, Dumbbell, TrendingUp, Target } from "@/components/icons";
+import { formatElapsedTime } from "@/hooks/use-workout-session";
 
-const WORKOUT_SUMMARY = {
-  name: "Push Day A",
-  duration: "52:34",
-  exercises: 6,
-  sets: 20,
-  totalVolume: "12,450 kg",
-  prs: [
-    { exercise: "Bench Press", type: "Weight", value: "82.5 kg" },
-  ],
-};
+// Helper to format volume
+function formatVolume(volume: number): string {
+  if (volume >= 1000) {
+    return `${(volume / 1000).toFixed(1)}k kg`;
+  }
+  return `${Math.round(volume)} kg`;
+}
 
 export default function WorkoutCompleteScreen() {
   const router = useRouter();
+  const {
+    workoutLogId,
+    workoutName,
+    durationSeconds,
+    exerciseCount,
+    setCount,
+    totalVolume,
+  } = useLocalSearchParams<{
+    workoutLogId: string;
+    workoutName: string;
+    durationSeconds: string;
+    exerciseCount: string;
+    setCount: string;
+    totalVolume: string;
+  }>();
+
+  // Parse params
+  const duration = parseInt(durationSeconds || "0", 10);
+  const exercises = parseInt(exerciseCount || "0", 10);
+  const sets = parseInt(setCount || "0", 10);
+  const volume = parseFloat(totalVolume || "0");
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -32,51 +51,43 @@ export default function WorkoutCompleteScreen() {
         </View>
 
         <Text style={styles.title}>Workout Complete!</Text>
-        <Text style={styles.subtitle}>{WORKOUT_SUMMARY.name}</Text>
+        <Text style={styles.subtitle}>{workoutName || "Workout"}</Text>
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <Clock size={24} color={colors.emerald500} />
-            <Text style={styles.statValue}>{WORKOUT_SUMMARY.duration}</Text>
+            <Text style={styles.statValue}>{formatElapsedTime(duration)}</Text>
             <Text style={styles.statLabel}>Duration</Text>
           </View>
           <View style={styles.statCard}>
             <Dumbbell size={24} color={colors.emerald500} />
-            <Text style={styles.statValue}>{WORKOUT_SUMMARY.exercises}</Text>
+            <Text style={styles.statValue}>{exercises}</Text>
             <Text style={styles.statLabel}>Exercises</Text>
           </View>
           <View style={styles.statCard}>
             <Target size={24} color={colors.emerald500} />
-            <Text style={styles.statValue}>{WORKOUT_SUMMARY.sets}</Text>
+            <Text style={styles.statValue}>{sets}</Text>
             <Text style={styles.statLabel}>Sets</Text>
           </View>
           <View style={styles.statCard}>
             <TrendingUp size={24} color={colors.emerald500} />
-            <Text style={styles.statValue}>{WORKOUT_SUMMARY.totalVolume}</Text>
+            <Text style={styles.statValue}>{formatVolume(volume)}</Text>
             <Text style={styles.statLabel}>Volume</Text>
           </View>
         </View>
 
-        {/* PRs */}
-        {WORKOUT_SUMMARY.prs.length > 0 && (
-          <View style={styles.prSection}>
-            <Text style={styles.prTitle}>Personal Records</Text>
-            {WORKOUT_SUMMARY.prs.map((pr, index) => (
-              <View key={index} style={styles.prCard}>
-                <View style={styles.prIcon}>
-                  <TrendingUp size={20} color={colors.emerald500} />
-                </View>
-                <View style={styles.prContent}>
-                  <Text style={styles.prExercise}>{pr.exercise}</Text>
-                  <Text style={styles.prDetail}>
-                    {pr.type}: {pr.value}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
+        {/* Encouragement message based on performance */}
+        <View style={styles.encouragementCard}>
+          <Text style={styles.encouragementTitle}>
+            {sets > 0 ? "Great work!" : "Session logged"}
+          </Text>
+          <Text style={styles.encouragementText}>
+            {sets > 0
+              ? `You completed ${sets} set${sets !== 1 ? "s" : ""} and lifted ${formatVolume(volume)} total volume. Keep pushing!`
+              : "Your workout session has been recorded. Every workout counts!"}
+          </Text>
+        </View>
 
         {/* Actions */}
         <View style={styles.actions}>
@@ -87,8 +98,11 @@ export default function WorkoutCompleteScreen() {
             <Text style={styles.primaryButtonText}>Done</Text>
           </Pressable>
 
-          <Pressable style={styles.secondaryButton}>
-            <Text style={styles.secondaryButtonText}>Share Workout</Text>
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => router.replace("/(tabs)/history")}
+          >
+            <Text style={styles.secondaryButtonText}>View History</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -156,46 +170,27 @@ const styles = StyleSheet.create({
     color: colors.zinc500,
     marginTop: 2,
   },
-  prSection: {
+  encouragementCard: {
     width: "100%",
     marginTop: spacing.xl,
-  },
-  prTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.white,
-    marginBottom: spacing.md,
-  },
-  prCard: {
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: colors.emeraldAlpha10,
-    borderRadius: radius.lg,
-    padding: spacing.md,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.emerald500,
-  },
-  prIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
-    backgroundColor: colors.emeraldAlpha20,
     alignItems: "center",
-    justifyContent: "center",
-    marginRight: spacing.md,
   },
-  prContent: {
-    flex: 1,
-  },
-  prExercise: {
-    fontSize: fontSize.base,
+  encouragementTitle: {
+    fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
-    color: colors.white,
-    marginBottom: 2,
+    color: colors.emerald500,
+    marginBottom: spacing.sm,
   },
-  prDetail: {
+  encouragementText: {
     fontSize: fontSize.sm,
-    color: colors.emerald400,
+    color: colors.zinc300,
+    textAlign: "center",
+    lineHeight: 20,
   },
   actions: {
     width: "100%",

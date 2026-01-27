@@ -62,3 +62,12 @@ coverage/
 # Misc
 *.log
 projectdocs/
+
+# Lock files (except pnpm)
+package-lock.json
+yarn.lock
+
+# Temporary files
+*.tmp
+temp_*
+*.bak

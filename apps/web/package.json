@@ -10,9 +10,6 @@
   },
   "dependencies": {
     "@rota/i18n": "workspace:*",
-    "@rota/types": "workspace:*",
-    "@rota/ui": "workspace:*",
-    "@rota/utils": "workspace:*",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

@@ -58,6 +58,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />
+      {/* Hide exercises tab but keep file for future "create program" feature */}
+      <Tabs.Screen
+        name="exercises"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

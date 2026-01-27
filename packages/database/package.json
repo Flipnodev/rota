@@ -1,0 +1,27 @@
+{
+  "name": "@rota/database",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Supabase database schema and migrations for ROTA",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:migrate": "supabase migration up",
+    "db:new": "supabase migration new",
+    "db:diff": "supabase db diff",
+    "db:push": "supabase db push",
+    "db:pull": "supabase db pull",
+    "db:types": "supabase gen types typescript --local > src/types.ts",
+    "db:seed": "supabase db reset --seed-only"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "supabase": "^1.200.0",
+    "typescript": "^5.7.0"
+  }
+}

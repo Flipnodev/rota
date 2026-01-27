@@ -1,65 +1,49 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
-import { Calendar, TrendingUp, ChevronRight, Check } from "@/components/icons";
+import { Calendar, ChevronRight, Check, Dumbbell } from "@/components/icons";
+import { useWorkoutLogs } from "@/hooks/use-workout-logs";
 
-const WORKOUT_HISTORY = [
-  {
-    id: "1",
-    name: "Push Day A",
-    date: "Today",
-    duration: "52 min",
-    exercises: 6,
-    totalVolume: "12,450 kg",
-    prs: 1,
-  },
-  {
-    id: "2",
-    name: "Pull Day A",
-    date: "Yesterday",
-    duration: "48 min",
-    exercises: 6,
-    totalVolume: "11,200 kg",
-    prs: 0,
-  },
-  {
-    id: "3",
-    name: "Legs Day A",
-    date: "Jan 22",
-    duration: "61 min",
-    exercises: 5,
-    totalVolume: "18,900 kg",
-    prs: 2,
-  },
-  {
-    id: "4",
-    name: "Push Day B",
-    date: "Jan 21",
-    duration: "55 min",
-    exercises: 6,
-    totalVolume: "13,100 kg",
-    prs: 0,
-  },
-  {
-    id: "5",
-    name: "Pull Day B",
-    date: "Jan 20",
-    duration: "50 min",
-    exercises: 6,
-    totalVolume: "10,800 kg",
-    prs: 1,
-  },
-];
+function formatDuration(seconds: number | null): string {
+  if (!seconds) return "0 min";
+  const minutes = Math.round(seconds / 60);
+  return `${minutes} min`;
+}
 
-const STATS = {
-  thisWeek: 4,
-  thisMonth: 16,
-  totalVolume: "245,000 kg",
-  streak: 12,
-};
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 
 export default function HistoryScreen() {
+  const { workoutLogs, stats, isLoading, error } = useWorkoutLogs();
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.emerald500} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -72,15 +56,15 @@ export default function HistoryScreen() {
         {/* Stats Overview */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{STATS.thisWeek}</Text>
+            <Text style={styles.statValue}>{stats.thisWeek}</Text>
             <Text style={styles.statLabel}>This Week</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{STATS.thisMonth}</Text>
+            <Text style={styles.statValue}>{stats.thisMonth}</Text>
             <Text style={styles.statLabel}>This Month</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{STATS.streak}</Text>
+            <Text style={styles.statValue}>{stats.streak}</Text>
             <Text style={styles.statLabel}>Day Streak</Text>
           </View>
         </View>
@@ -89,7 +73,12 @@ export default function HistoryScreen() {
         <View style={styles.calendarCard}>
           <View style={styles.calendarHeader}>
             <Calendar size={20} color={colors.emerald500} />
-            <Text style={styles.calendarTitle}>January 2026</Text>
+            <Text style={styles.calendarTitle}>
+              {new Date().toLocaleDateString("en-US", {
+                month: "long",
+                year: "numeric",
+              })}
+            </Text>
           </View>
           <View style={styles.calendarPlaceholder}>
             <Text style={styles.placeholderText}>Calendar view coming soon</Text>
@@ -100,28 +89,37 @@ export default function HistoryScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Workouts</Text>
 
-          {WORKOUT_HISTORY.map((workout) => (
-            <Pressable key={workout.id} style={styles.workoutCard}>
-              <View style={styles.workoutIcon}>
-                <Check size={16} color={colors.emerald500} />
-              </View>
-              <View style={styles.workoutContent}>
-                <View style={styles.workoutHeader}>
-                  <Text style={styles.workoutName}>{workout.name}</Text>
-                  {workout.prs > 0 && (
-                    <View style={styles.prBadge}>
-                      <TrendingUp size={12} color={colors.emerald500} />
-                      <Text style={styles.prText}>{workout.prs} PR</Text>
-                    </View>
-                  )}
+          {workoutLogs.length > 0 ? (
+            workoutLogs.map((log) => (
+              <Pressable key={log.id} style={styles.workoutCard}>
+                <View style={styles.workoutIcon}>
+                  <Check size={16} color={colors.emerald500} />
                 </View>
-                <Text style={styles.workoutMeta}>
-                  {workout.date} · {workout.duration} · {workout.totalVolume}
-                </Text>
+                <View style={styles.workoutContent}>
+                  <View style={styles.workoutHeader}>
+                    <Text style={styles.workoutName}>
+                      {log.workout?.name || "Workout"}
+                    </Text>
+                  </View>
+                  <Text style={styles.workoutMeta}>
+                    {formatDate(log.started_at)} ·{" "}
+                    {formatDuration(log.duration_seconds)}
+                  </Text>
+                </View>
+                <ChevronRight size={20} color={colors.zinc600} />
+              </Pressable>
+            ))
+          ) : (
+            <View style={styles.emptyHistory}>
+              <View style={styles.emptyIconContainer}>
+                <Dumbbell size={32} color={colors.zinc500} />
               </View>
-              <ChevronRight size={20} color={colors.zinc600} />
-            </Pressable>
-          ))}
+              <Text style={styles.emptyTitle}>No Workout History</Text>
+              <Text style={styles.emptyText}>
+                Complete your first workout to start tracking your progress
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -132,6 +130,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.black,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   scroll: {
     flex: 1,
@@ -247,22 +250,36 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
     color: colors.white,
   },
-  prBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    backgroundColor: colors.emeraldAlpha10,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
-  },
-  prText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
-    color: colors.emerald500,
-  },
   workoutMeta: {
     fontSize: fontSize.sm,
     color: colors.zinc500,
+  },
+  emptyHistory: {
+    backgroundColor: colors.zinc900,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.zinc800,
+    alignItems: "center",
+  },
+  emptyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.whiteAlpha5,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
+  emptyTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+    color: colors.white,
+    marginBottom: spacing.sm,
+  },
+  emptyText: {
+    fontSize: fontSize.sm,
+    color: colors.zinc500,
+    textAlign: "center",
   },
 });
