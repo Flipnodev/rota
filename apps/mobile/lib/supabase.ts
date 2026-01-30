@@ -18,6 +18,7 @@ export const supabase: SupabaseClient = createMobileClient(
   supabaseAnonKey || "placeholder-key",
   {
     getItem: async (key: string) => {
+      if (typeof window === "undefined") return null;
       try {
         return await AsyncStorage.getItem(key);
       } catch (error) {
@@ -26,6 +27,7 @@ export const supabase: SupabaseClient = createMobileClient(
       }
     },
     setItem: async (key: string, value: string) => {
+      if (typeof window === "undefined") return;
       try {
         await AsyncStorage.setItem(key, value);
       } catch (error) {
@@ -33,6 +35,7 @@ export const supabase: SupabaseClient = createMobileClient(
       }
     },
     removeItem: async (key: string) => {
+      if (typeof window === "undefined") return;
       try {
         await AsyncStorage.removeItem(key);
       } catch (error) {
