@@ -60,14 +60,12 @@ create policy "Users can delete own user_programs"
 -- FUNCTIONS
 -- ============================================================================
 
--- Function to start a program (copies template if needed, sets as active)
+-- Function to start a program (links user to existing program, no copying)
 create or replace function public.start_program(p_program_id uuid)
 returns jsonb as $$
 declare
   v_user_id uuid;
-  v_program record;
   v_user_program_id uuid;
-  v_target_program_id uuid;
 begin
   v_user_id := auth.uid();
 
@@ -75,22 +73,9 @@ begin
     return jsonb_build_object('success', false, 'error', 'Not authenticated');
   end if;
 
-  -- Get the program
-  select * into v_program from public.programs where id = p_program_id;
-
-  if not found then
+  -- Check if program exists
+  if not exists (select 1 from public.programs where id = p_program_id) then
     return jsonb_build_object('success', false, 'error', 'Program not found');
-  end if;
-
-  -- If it's a template, copy it first
-  if v_program.is_template then
-    v_target_program_id := public.copy_program_to_user(p_program_id);
-  else
-    -- Check if user owns this program
-    if v_program.user_id != v_user_id then
-      return jsonb_build_object('success', false, 'error', 'Access denied');
-    end if;
-    v_target_program_id := p_program_id;
   end if;
 
   -- Pause any currently active programs for this user
@@ -101,7 +86,7 @@ begin
   -- Check if user already has this program in user_programs
   select id into v_user_program_id
   from public.user_programs
-  where user_id = v_user_id and program_id = v_target_program_id;
+  where user_id = v_user_id and program_id = p_program_id;
 
   if v_user_program_id is not null then
     -- Reactivate existing entry
@@ -109,16 +94,16 @@ begin
     set status = 'active', updated_at = now()
     where id = v_user_program_id;
   else
-    -- Create new entry
+    -- Create new entry linking to the program
     insert into public.user_programs (user_id, program_id, status)
-    values (v_user_id, v_target_program_id, 'active')
+    values (v_user_id, p_program_id, 'active')
     returning id into v_user_program_id;
   end if;
 
   return jsonb_build_object(
     'success', true,
     'user_program_id', v_user_program_id,
-    'program_id', v_target_program_id
+    'program_id', p_program_id
   );
 end;
 $$ language plpgsql security definer;

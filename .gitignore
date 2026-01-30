@@ -51,6 +51,10 @@ yarn-error.*
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
+.vscode
+.claude
+CLAUDE.md
+
 
 # macOS
 .DS_Store
@@ -61,7 +65,7 @@ coverage/
 
 # Misc
 *.log
-projectdocs/
+.projectdocs/
 
 # Lock files (except pnpm)
 package-lock.json
