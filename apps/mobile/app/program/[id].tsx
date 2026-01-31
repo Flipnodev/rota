@@ -5,6 +5,7 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -23,6 +24,7 @@ import {
   Lock,
 } from "@/components/icons";
 import { useProgram } from "@/hooks/use-program";
+import { useActiveProgram } from "@/hooks/use-active-program";
 import { useAuth } from "@/providers/auth-provider";
 
 // Helper to format difficulty level
@@ -35,19 +37,25 @@ function formatGoal(goal: string): string {
   return goal.charAt(0).toUpperCase() + goal.slice(1);
 }
 
-// Helper to get day name
-function getDayName(dayOfWeek: number): string {
-  const days = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
-  // Adjust for 1-indexed days (1 = Monday)
-  return days[dayOfWeek % 7] || `Day ${dayOfWeek}`;
+// Helper to get day label (sequential: Day 1, Day 2, etc.)
+function getDayLabel(dayNumber: number): string {
+  return `Day ${dayNumber}`;
+}
+
+// Helper to calculate which program day the user is on (1-based)
+function getCurrentProgramDay(startedAt: Date | null): number {
+  if (!startedAt) {
+    return 1; // Show Day 1 workouts if not started
+  }
+
+  const now = new Date();
+  const startDate = new Date(startedAt.getFullYear(), startedAt.getMonth(), startedAt.getDate());
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const daysElapsed = Math.floor((today.getTime() - startDate.getTime()) / msPerDay);
+
+  return daysElapsed + 1; // Day 1 on start day, Day 2 on next day, etc.
 }
 
 export default function ProgramDetailScreen() {
@@ -64,24 +72,34 @@ export default function ProgramDetailScreen() {
     progress,
     currentWeek,
     hasStartedProgram,
+    programStartedAt,
     isLoading,
     error,
+    refetch,
   } = useProgram(id || null);
+
+  const { startProgram } = useActiveProgram();
+  const [isSelectingProgram, setIsSelectingProgram] = useState(false);
 
   // Check if this is a template program vs user's own program
   const isTemplate = program?.is_template === true;
   const isOwnProgram = program?.user_id != null && program?.user_id === user?.id;
-  const showStartProgramText = isTemplate && !isOwnProgram && !hasStartedProgram;
+  const needsToSelectProgram = isTemplate && !hasStartedProgram;
 
-  // Get today's day of week (1-7, Monday-Sunday format)
-  const today = new Date();
-  const todayDayOfWeek = today.getDay() || 7; // Convert Sunday from 0 to 7
+  // Get week 1 workouts for display (sorted by day_of_week)
+  const week1Workouts = (program?.workouts?.filter((w) => w.week_number === 1) || [])
+    .sort((a, b) => a.day_of_week - b.day_of_week);
 
-  // Get week 1 workouts for display
-  const week1Workouts = program?.workouts?.filter((w) => w.week_number === 1) || [];
+  // Calculate current program day using sequential logic
+  const daysPerWeek = program?.days_per_week || 1;
+  const currentProgramDay = getCurrentProgramDay(programStartedAt);
 
-  // Find today's workouts (can be multiple)
-  const todaysWorkouts = week1Workouts.filter((w) => w.day_of_week === todayDayOfWeek);
+  // Convert program day to day within week (1 to daysPerWeek)
+  const dayInWeek = ((currentProgramDay - 1) % daysPerWeek) + 1;
+
+  // Find today's workout(s) based on sequential day
+  // day_of_week in the database represents Day 1, Day 2, etc. of the week
+  const todaysWorkouts = week1Workouts.filter((w) => w.day_of_week === dayInWeek);
   const allTodaysWorkoutsCompleted = todaysWorkouts.length > 0 &&
     todaysWorkouts.every((w) => todayCompletedWorkoutIds.includes(w.id));
   const nextIncompleteWorkout = todaysWorkouts.find((w) => !todayCompletedWorkoutIds.includes(w.id));
@@ -118,22 +136,64 @@ export default function ProgramDetailScreen() {
     [router, id, isTemplate, isOwnProgram, program?.id]
   );
 
-  // Handle "Start Program" / "Start Today's Workout" button
+  // Handle selecting a program (without starting workout)
+  const handleSelectProgram = useCallback(async () => {
+    if (!program?.id) return;
+
+    setIsSelectingProgram(true);
+    try {
+      const result = await startProgram(program.id);
+      if (result.success) {
+        await refetch();
+        // Ask if user wants to start workout now
+        if (nextIncompleteWorkout) {
+          Alert.alert(
+            "Program Selected",
+            "Would you like to start your first workout now?",
+            [
+              {
+                text: "Later",
+                style: "cancel",
+              },
+              {
+                text: "Start Now",
+                onPress: () => {
+                  router.push({
+                    pathname: "/workout/active",
+                    params: {
+                      workoutId: nextIncompleteWorkout.id,
+                      programId: program.id,
+                    },
+                  });
+                },
+              },
+            ]
+          );
+        }
+      } else {
+        Alert.alert("Error", result.error || "Failed to select program");
+      }
+    } catch (err) {
+      Alert.alert("Error", "Failed to select program");
+    } finally {
+      setIsSelectingProgram(false);
+    }
+  }, [program?.id, startProgram, refetch, nextIncompleteWorkout, router]);
+
+  // Handle "Start Today's Workout" button (when program is already selected)
   const handleStartTodaysWorkout = useCallback(() => {
     if (!nextIncompleteWorkout) {
       return;
     }
 
-    // Navigate to workout - pass templateProgramId if this is a template
     router.push({
       pathname: "/workout/active",
       params: {
         workoutId: nextIncompleteWorkout.id,
         programId: id,
-        ...(isTemplate && !isOwnProgram ? { templateProgramId: program?.id } : {}),
       },
     });
-  }, [nextIncompleteWorkout, router, id, isTemplate, isOwnProgram, program?.id]);
+  }, [nextIncompleteWorkout, router, id]);
 
   if (isLoading) {
     return (
@@ -247,7 +307,8 @@ export default function ProgramDetailScreen() {
           <Text style={styles.sectionTitle}>Weekly Schedule</Text>
           {week1Workouts.length > 0 ? (
             week1Workouts.map((workout) => {
-              const isToday = workout.day_of_week === todayDayOfWeek;
+              // Check if this workout is for today's program day
+              const isToday = workout.day_of_week === dayInWeek;
               const exerciseCount = workout.workout_exercises?.length || 0;
               const isCompletedToday = todayCompletedWorkoutIds.includes(workout.id);
               const canStart = isToday && !isCompletedToday;
@@ -285,7 +346,7 @@ export default function ProgramDetailScreen() {
                         isCompletedToday && styles.scheduleDayTextCompleted,
                       ]}
                     >
-                      {getDayName(workout.day_of_week)}
+                      {getDayLabel(workout.day_of_week)}
                     </Text>
                     {canStart && (
                       <View style={styles.todayBadge}>
@@ -388,16 +449,30 @@ export default function ProgramDetailScreen() {
         )}
 
         {/* Start Button */}
-        {nextIncompleteWorkout ? (
-          // There's a workout today that's not completed
+        {needsToSelectProgram ? (
+          // Program not selected yet - show "Start Program" button
+          <Pressable
+            style={[styles.startButton, isSelectingProgram && styles.startButtonDisabled]}
+            onPress={handleSelectProgram}
+            disabled={isSelectingProgram}
+          >
+            {isSelectingProgram ? (
+              <ActivityIndicator size="small" color={colors.black} />
+            ) : (
+              <Play size={20} color={colors.black} />
+            )}
+            <Text style={styles.startButtonText}>
+              {isSelectingProgram ? "Selecting..." : "Start Program"}
+            </Text>
+          </Pressable>
+        ) : nextIncompleteWorkout ? (
+          // Program selected, there's a workout available
           <Pressable
             style={styles.startButton}
             onPress={handleStartTodaysWorkout}
           >
             <Play size={20} color={colors.black} />
-            <Text style={styles.startButtonText}>
-              {showStartProgramText ? "Start Program" : "Start Today's Workout"}
-            </Text>
+            <Text style={styles.startButtonText}>Start Today's Workout</Text>
           </Pressable>
         ) : allTodaysWorkoutsCompleted ? (
           // All of today's workouts are done
@@ -785,6 +860,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     gap: spacing.sm,
     marginTop: spacing.xl,
+  },
+  startButtonDisabled: {
+    opacity: 0.7,
   },
   startButtonText: {
     fontSize: fontSize.base,

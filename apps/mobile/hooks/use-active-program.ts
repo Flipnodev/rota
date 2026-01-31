@@ -17,7 +17,7 @@ interface ActiveProgramData {
   userProgram: {
     id: string;
     status: string;
-    started_at: string;
+    started_at: string | null; // null until first workout begins
   };
   program: {
     id: string;
@@ -34,6 +34,23 @@ interface ActiveProgramData {
   };
 }
 
+// Helper to calculate which program day the user is on (1-based)
+// Returns 1 if program hasn't started yet, otherwise days elapsed + 1
+function getCurrentProgramDay(startedAt: Date | null): number {
+  if (!startedAt) {
+    return 1; // Show Day 1 workouts if not started
+  }
+
+  const now = new Date();
+  const startDate = new Date(startedAt.getFullYear(), startedAt.getMonth(), startedAt.getDate());
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const daysElapsed = Math.floor((today.getTime() - startDate.getTime()) / msPerDay);
+
+  return daysElapsed + 1; // Day 1 on start day, Day 2 on next day, etc.
+}
+
 interface UseActiveProgramReturn {
   activeProgram: ActiveProgramData | null;
   workouts: WorkoutWithExercises[];
@@ -44,6 +61,8 @@ interface UseActiveProgramReturn {
   allTodaysWorkoutsCompleted: boolean;
   currentWeek: number;
   totalWeeks: number;
+  currentProgramDay: number; // Sequential day in program (1, 2, 3, ...)
+  programStartedAt: Date | null; // When user started first workout, null if not started
   progress: number;
   completedWorkouts: number;
   totalWorkouts: number;
@@ -225,10 +244,23 @@ export function useActiveProgram(): UseActiveProgramReturn {
     : 1;
   const totalWeeks = activeProgram?.program.duration_weeks || 0;
 
-  // Find today's workouts (can be multiple)
-  const today = new Date();
-  const dayOfWeek = today.getDay() || 7; // Convert Sunday from 0 to 7
-  const todaysWorkouts = workouts.filter((w) => w.day_of_week === dayOfWeek);
+  // Find today's workouts using sequential day logic
+  // Parse program start date (null until first workout begins)
+  const programStartedAt = activeProgram?.userProgram.started_at
+    ? new Date(activeProgram.userProgram.started_at)
+    : null;
+
+  // Calculate which program day the user is on
+  const currentProgramDay = getCurrentProgramDay(programStartedAt);
+
+  // Convert program day to day within week (1-7)
+  // Day 1-7 = Week 1, Day 8-14 = Week 2, etc.
+  const dayInWeek = ((currentProgramDay - 1) % daysPerWeek) + 1;
+
+  // Filter workouts for the current day in the week
+  // day_of_week in workouts represents Day 1, Day 2, etc. within the week
+  const todaysWorkouts = workouts.filter((w) => w.day_of_week === dayInWeek);
+
   // For backwards compatibility, also provide single workout
   const todaysWorkout = todaysWorkouts.length > 0 ? todaysWorkouts[0] : null;
   // Check if ALL today's workouts are completed
@@ -247,6 +279,8 @@ export function useActiveProgram(): UseActiveProgramReturn {
     allTodaysWorkoutsCompleted,
     currentWeek,
     totalWeeks,
+    currentProgramDay,
+    programStartedAt,
     progress,
     completedWorkouts,
     totalWorkouts,

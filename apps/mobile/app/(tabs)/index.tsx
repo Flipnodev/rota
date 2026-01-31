@@ -31,6 +31,8 @@ export default function HomeScreen() {
     isTodaysWorkoutCompleted,
     currentWeek,
     totalWeeks,
+    currentProgramDay,
+    programStartedAt,
     progress,
     completedWorkouts,
     totalWorkouts,
@@ -74,7 +76,7 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.programName}>{activeProgram.program.name}</Text>
             <Text style={styles.programMeta}>
-              Week {currentWeek} of {totalWeeks} · {completedWorkouts}/{totalWorkouts} workouts
+              {programStartedAt ? `Day ${currentProgramDay}` : "Not started"} · Week {currentWeek} of {totalWeeks} · {completedWorkouts}/{totalWorkouts} workouts
             </Text>
 
             <View style={styles.programProgress}>

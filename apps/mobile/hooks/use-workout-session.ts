@@ -271,6 +271,13 @@ export function useWorkoutSession(): UseWorkoutSessionReturn {
         finalProgramId = result.programId || templateProgramId;
       }
 
+      // Mark the program as started (sets started_at on first workout)
+      if (finalProgramId) {
+        await supabase.rpc("start_program_workout", {
+          p_program_id: finalProgramId,
+        });
+      }
+
       // Create workout log entry
       const startTime = new Date();
       const { data: logData, error: logError } = await supabase

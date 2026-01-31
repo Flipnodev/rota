@@ -33,6 +33,7 @@ interface UseProgramReturn {
   progress: number;
   currentWeek: number;
   hasStartedProgram: boolean;
+  programStartedAt: Date | null;
   isLoading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
@@ -46,6 +47,7 @@ export function useProgram(programId: string | null): UseProgramReturn {
   const [mappedCompletedWorkoutIds, setMappedCompletedWorkoutIds] = useState<string[]>([]);
   const [todayCompletedWorkoutIds, setTodayCompletedWorkoutIds] = useState<string[]>([]);
   const [hasStartedProgram, setHasStartedProgram] = useState(false);
+  const [programStartedAt, setProgramStartedAt] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -125,13 +127,14 @@ export function useProgram(programId: string | null): UseProgramReturn {
         // Check if user has started this program (either template or their own)
         const { data: userProgramEntry } = await supabase
           .from("user_programs")
-          .select("id")
+          .select("id, started_at")
           .eq("user_id", user.id)
           .eq("program_id", programId)
           .maybeSingle();
 
         const userHasStarted = !!userProgramEntry || !data.is_template;
         setHasStartedProgram(userHasStarted);
+        setProgramStartedAt(userProgramEntry?.started_at ? new Date(userProgramEntry.started_at) : null);
 
         if (userHasStarted && workoutIds.length > 0) {
           const { data: logs, error: logsError } = await supabase
@@ -222,6 +225,7 @@ export function useProgram(programId: string | null): UseProgramReturn {
     progress,
     currentWeek,
     hasStartedProgram,
+    programStartedAt,
     isLoading,
     error,
     refetch: fetchProgram,
