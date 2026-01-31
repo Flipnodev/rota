@@ -6,11 +6,11 @@ import {
   Pressable,
   TextInput,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from "react-native";
+import { showAlert, showError } from "@/lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
@@ -32,19 +32,19 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     if (!displayName.trim()) {
-      Alert.alert("Error", "Display name cannot be empty");
+      showError("Error", "Display name cannot be empty");
       return;
     }
 
     setIsSaving(true);
     try {
       await updateProfile({ display_name: displayName.trim() });
-      Alert.alert("Success", "Profile updated successfully", [
+      showAlert("Success", "Profile updated successfully", [
         { text: "OK", onPress: () => router.back() },
       ]);
     } catch (error) {
       console.error("Failed to update profile:", error);
-      Alert.alert("Error", "Failed to update profile. Please try again.");
+      showError("Error", "Failed to update profile. Please try again.");
     } finally {
       setIsSaving(false);
     }

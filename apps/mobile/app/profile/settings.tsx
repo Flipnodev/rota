@@ -6,73 +6,102 @@ import {
   Pressable,
   Switch,
   ScrollView,
+  ActivityIndicator,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
-import { ChevronLeft, ChevronRight } from "@/components/icons";
+import { ChevronLeft, ChevronRight, Trash } from "@/components/icons";
+import { useSettings, type AppSettings } from "@/hooks/use-settings";
+import { useActiveProgram } from "@/hooks/use-active-program";
+import { showAlert, showError } from "@/lib/alert";
 
 interface SettingToggle {
-  id: string;
+  id: keyof AppSettings;
   label: string;
   description: string;
-  value: boolean;
 }
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { settings, isLoading, updateSetting } = useSettings();
+  const { activeProgram, stopProgram, progress } = useActiveProgram();
+  const [isStoppingProgram, setIsStoppingProgram] = useState(false);
 
-  // Local state for settings (these would normally be persisted)
-  const [notifications, setNotifications] = useState(true);
-  const [workoutReminders, setWorkoutReminders] = useState(true);
-  const [soundEffects, setSoundEffects] = useState(true);
-  const [hapticFeedback, setHapticFeedback] = useState(true);
-  const [useMetric, setUseMetric] = useState(true);
-
-  const toggleSettings: SettingToggle[] = [
+  const notificationSettings: SettingToggle[] = [
     {
       id: "notifications",
       label: "Push Notifications",
       description: "Receive workout reminders and updates",
-      value: notifications,
     },
     {
       id: "workoutReminders",
       label: "Workout Reminders",
       description: "Get reminded on your scheduled workout days",
-      value: workoutReminders,
     },
+  ];
+
+  const appSettings: SettingToggle[] = [
     {
       id: "soundEffects",
       label: "Sound Effects",
       description: "Play sounds during workouts",
-      value: soundEffects,
     },
     {
       id: "hapticFeedback",
       label: "Haptic Feedback",
       description: "Vibration feedback when completing sets",
-      value: hapticFeedback,
     },
   ];
 
-  const handleToggle = (id: string) => {
-    switch (id) {
-      case "notifications":
-        setNotifications(!notifications);
-        break;
-      case "workoutReminders":
-        setWorkoutReminders(!workoutReminders);
-        break;
-      case "soundEffects":
-        setSoundEffects(!soundEffects);
-        break;
-      case "hapticFeedback":
-        setHapticFeedback(!hapticFeedback);
-        break;
-    }
+  const handleToggle = async (id: keyof AppSettings) => {
+    await updateSetting(id, !settings[id]);
   };
+
+  const handlePrivacyPolicy = () => {
+    Linking.openURL("https://rota.app/privacy");
+  };
+
+  const handleTermsOfService = () => {
+    Linking.openURL("https://rota.app/terms");
+  };
+
+  const handleStopProgram = () => {
+    if (!activeProgram) return;
+
+    showAlert(
+      "Stop Program",
+      `Are you sure you want to stop "${activeProgram.program.name}"? Your workout history will be preserved, but you'll need to start a new program.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Stop Program",
+          style: "destructive",
+          onPress: async () => {
+            setIsStoppingProgram(true);
+            const result = await stopProgram();
+            setIsStoppingProgram(false);
+
+            if (!result.success) {
+              showError("Error", result.error || "Failed to stop program");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.emerald500} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -90,12 +119,12 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notifications</Text>
           <View style={styles.settingsCard}>
-            {toggleSettings.slice(0, 2).map((setting, index) => (
+            {notificationSettings.map((setting, index) => (
               <View
                 key={setting.id}
                 style={[
                   styles.settingItem,
-                  index < 1 && styles.settingItemBorder,
+                  index < notificationSettings.length - 1 && styles.settingItemBorder,
                 ]}
               >
                 <View style={styles.settingContent}>
@@ -105,7 +134,7 @@ export default function SettingsScreen() {
                   </Text>
                 </View>
                 <Switch
-                  value={setting.value}
+                  value={settings[setting.id] as boolean}
                   onValueChange={() => handleToggle(setting.id)}
                   trackColor={{ false: colors.zinc700, true: colors.emerald500 }}
                   thumbColor={colors.white}
@@ -119,12 +148,12 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>App Preferences</Text>
           <View style={styles.settingsCard}>
-            {toggleSettings.slice(2).map((setting, index) => (
+            {appSettings.map((setting, index) => (
               <View
                 key={setting.id}
                 style={[
                   styles.settingItem,
-                  index < 1 && styles.settingItemBorder,
+                  index < appSettings.length - 1 && styles.settingItemBorder,
                 ]}
               >
                 <View style={styles.settingContent}>
@@ -134,7 +163,7 @@ export default function SettingsScreen() {
                   </Text>
                 </View>
                 <Switch
-                  value={setting.value}
+                  value={settings[setting.id] as boolean}
                   onValueChange={() => handleToggle(setting.id)}
                   trackColor={{ false: colors.zinc700, true: colors.emerald500 }}
                   thumbColor={colors.white}
@@ -152,21 +181,21 @@ export default function SettingsScreen() {
               <View style={styles.settingContent}>
                 <Text style={styles.settingLabel}>Weight Units</Text>
                 <Text style={styles.settingDescription}>
-                  {useMetric ? "Kilograms (kg)" : "Pounds (lbs)"}
+                  {settings.useMetric ? "Kilograms (kg)" : "Pounds (lbs)"}
                 </Text>
               </View>
               <View style={styles.unitToggle}>
                 <Pressable
                   style={[
                     styles.unitButton,
-                    useMetric && styles.unitButtonActive,
+                    settings.useMetric && styles.unitButtonActive,
                   ]}
-                  onPress={() => setUseMetric(true)}
+                  onPress={() => updateSetting("useMetric", true)}
                 >
                   <Text
                     style={[
                       styles.unitButtonText,
-                      useMetric && styles.unitButtonTextActive,
+                      settings.useMetric && styles.unitButtonTextActive,
                     ]}
                   >
                     kg
@@ -175,14 +204,14 @@ export default function SettingsScreen() {
                 <Pressable
                   style={[
                     styles.unitButton,
-                    !useMetric && styles.unitButtonActive,
+                    !settings.useMetric && styles.unitButtonActive,
                   ]}
-                  onPress={() => setUseMetric(false)}
+                  onPress={() => updateSetting("useMetric", false)}
                 >
                   <Text
                     style={[
                       styles.unitButtonText,
-                      !useMetric && styles.unitButtonTextActive,
+                      !settings.useMetric && styles.unitButtonTextActive,
                     ]}
                   >
                     lbs
@@ -193,20 +222,51 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Active Program Section */}
+        {activeProgram && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Active Program</Text>
+            <View style={styles.settingsCard}>
+              <View style={styles.programItem}>
+                <View style={styles.programInfo}>
+                  <Text style={styles.programName}>{activeProgram.program.name}</Text>
+                  <Text style={styles.programProgress}>
+                    {progress}% complete • Week {Math.min(
+                      Math.floor(activeProgram.progress.completed_workouts / activeProgram.program.days_per_week) + 1,
+                      activeProgram.program.duration_weeks
+                    )} of {activeProgram.program.duration_weeks}
+                  </Text>
+                </View>
+                <Pressable
+                  style={styles.stopProgramButton}
+                  onPress={handleStopProgram}
+                  disabled={isStoppingProgram}
+                >
+                  {isStoppingProgram ? (
+                    <ActivityIndicator size="small" color={colors.error} />
+                  ) : (
+                    <Trash size={20} color={colors.error} />
+                  )}
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* About Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
           <View style={styles.settingsCard}>
-            <Pressable style={styles.linkItem}>
+            <Pressable style={styles.linkItem} onPress={handlePrivacyPolicy}>
               <Text style={styles.linkLabel}>Privacy Policy</Text>
               <ChevronRight size={20} color={colors.zinc600} />
             </Pressable>
-            <View style={styles.settingItemBorder} />
-            <Pressable style={styles.linkItem}>
+            <View style={styles.divider} />
+            <Pressable style={styles.linkItem} onPress={handleTermsOfService}>
               <Text style={styles.linkLabel}>Terms of Service</Text>
               <ChevronRight size={20} color={colors.zinc600} />
             </Pressable>
-            <View style={styles.settingItemBorder} />
+            <View style={styles.divider} />
             <View style={styles.linkItem}>
               <Text style={styles.linkLabel}>App Version</Text>
               <Text style={styles.linkValue}>1.0.0</Text>
@@ -216,7 +276,7 @@ export default function SettingsScreen() {
 
         {/* Footer Note */}
         <Text style={styles.footerNote}>
-          Settings are stored locally on your device. Some settings may require app restart to take effect.
+          Settings are synced across your devices.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -227,6 +287,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.black,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   scroll: {
     flex: 1,
@@ -323,6 +388,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: spacing.md,
   },
+  divider: {
+    height: 1,
+    backgroundColor: colors.zinc800,
+  },
   linkLabel: {
     fontSize: fontSize.base,
     color: colors.white,
@@ -338,5 +407,31 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     paddingHorizontal: spacing.md,
     lineHeight: 18,
+  },
+  programItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: spacing.md,
+  },
+  programInfo: {
+    flex: 1,
+  },
+  programName: {
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.medium,
+    color: colors.white,
+    marginBottom: 2,
+  },
+  programProgress: {
+    fontSize: fontSize.sm,
+    color: colors.zinc500,
+  },
+  stopProgramButton: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.error + "20",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

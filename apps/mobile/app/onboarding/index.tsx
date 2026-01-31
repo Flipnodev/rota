@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable } from "react-native";
+import { showError } from "@/lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -134,10 +135,9 @@ export default function OnboardingScreen() {
         router.replace("/(tabs)");
       } catch (error) {
         console.error("Failed to save onboarding data:", error);
-        Alert.alert(
+        showError(
           "Error",
-          "Failed to save your preferences. Please try again.",
-          [{ text: "OK" }]
+          "Failed to save your preferences. Please try again."
         );
       } finally {
         setIsSaving(false);

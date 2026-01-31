@@ -1,13 +1,13 @@
 import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { showAlert, showError } from "@/lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
@@ -17,6 +17,7 @@ import {
   Target,
   TrendingUp,
   User,
+  Dumbbell,
 } from "@/components/icons";
 import {
   colors,
@@ -27,7 +28,30 @@ import {
 } from "@/constants/theme";
 import { useProfile } from "@/hooks/use-profile";
 import { useWorkoutLogs } from "@/hooks/use-workout-logs";
+import { useActiveProgram } from "@/hooks/use-active-program";
 import { useAuth } from "@/providers/auth-provider";
+
+interface OnboardingData {
+  fitness_goal?: string;
+  experience_level?: string;
+  available_equipment?: string;
+  preferred_schedule?: string;
+}
+
+const GOAL_LABELS: Record<string, string> = {
+  strength: "Build Strength",
+  muscle: "Build Muscle",
+  endurance: "Improve Endurance",
+  health: "General Health",
+};
+
+const SCHEDULE_LABELS: Record<string, string> = {
+  "2": "2 days/week",
+  "3": "3 days/week",
+  "4": "4 days/week",
+  "5": "5 days/week",
+  "6": "6 days/week",
+};
 
 const MENU_ITEMS = [
   {
@@ -65,12 +89,22 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { profile, isLoading: profileLoading } = useProfile();
   const { stats, isLoading: logsLoading } = useWorkoutLogs();
+  const { activeProgram, isLoading: programLoading } = useActiveProgram();
   const { signOut, loading: authLoading } = useAuth();
 
-  const isLoading = profileLoading || logsLoading;
+  const isLoading = profileLoading || logsLoading || programLoading;
+
+  // Get onboarding data
+  const onboardingData = profile?.onboarding_data as OnboardingData | null;
+  const currentGoal = onboardingData?.fitness_goal
+    ? GOAL_LABELS[onboardingData.fitness_goal] || onboardingData.fitness_goal
+    : null;
+  const currentSchedule = onboardingData?.preferred_schedule
+    ? SCHEDULE_LABELS[onboardingData.preferred_schedule] || `${onboardingData.preferred_schedule} days/week`
+    : null;
 
   const handleSignOut = async () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+    showAlert("Sign Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Sign Out",
@@ -79,12 +113,12 @@ export default function ProfileScreen() {
           try {
             const { error } = await signOut();
             if (error) {
-              Alert.alert("Error", "Failed to sign out. Please try again.");
+              showError("Error", "Failed to sign out. Please try again.");
             } else {
               router.replace("/auth");
             }
           } catch (err) {
-            Alert.alert("Error", "Failed to sign out. Please try again.");
+            showError("Error", "Failed to sign out. Please try again.");
           }
         },
       },
@@ -145,6 +179,45 @@ export default function ProfileScreen() {
             <Text style={styles.statLabel}>Day Streak</Text>
           </View>
         </View>
+
+        {/* Current Program & Goals */}
+        {(activeProgram || currentGoal || currentSchedule) && (
+          <View style={styles.currentInfoCard}>
+            {activeProgram && (
+              <View style={styles.infoRow}>
+                <View style={styles.infoIconContainer}>
+                  <Dumbbell size={16} color={colors.emerald500} />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Current Program</Text>
+                  <Text style={styles.infoValue}>{activeProgram.program?.name}</Text>
+                </View>
+              </View>
+            )}
+            {currentGoal && (
+              <View style={styles.infoRow}>
+                <View style={styles.infoIconContainer}>
+                  <Target size={16} color={colors.emerald500} />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Fitness Goal</Text>
+                  <Text style={styles.infoValue}>{currentGoal}</Text>
+                </View>
+              </View>
+            )}
+            {currentSchedule && (
+              <View style={styles.infoRow}>
+                <View style={styles.infoIconContainer}>
+                  <Calendar size={16} color={colors.emerald500} />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Training Schedule</Text>
+                  <Text style={styles.infoValue}>{currentSchedule}</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Menu Sections */}
         {MENU_ITEMS.map((section) => (
@@ -287,6 +360,40 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: colors.zinc800,
     marginVertical: spacing.xs,
+  },
+  currentInfoCard: {
+    backgroundColor: colors.zinc900,
+    borderRadius: radius.xl,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.zinc800,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  infoIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.md,
+    backgroundColor: colors.emeraldAlpha10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: fontSize.xs,
+    color: colors.zinc500,
+  },
+  infoValue: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    color: colors.white,
   },
   section: {
     marginBottom: spacing.lg,

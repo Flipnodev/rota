@@ -51,6 +51,7 @@ interface UseActiveProgramReturn {
   error: Error | null;
   refetch: () => Promise<void>;
   startProgram: (programId: string) => Promise<{ success: boolean; programId?: string; error?: string }>;
+  stopProgram: () => Promise<{ success: boolean; error?: string }>;
 }
 
 export function useActiveProgram(): UseActiveProgramReturn {
@@ -175,6 +176,38 @@ export function useActiveProgram(): UseActiveProgramReturn {
     [supabase, user?.id, fetchActiveProgram]
   );
 
+  // Stop the current active program
+  const stopProgram = useCallback(
+    async (): Promise<{ success: boolean; error?: string }> => {
+      if (!user?.id || !activeProgram?.userProgram.id) {
+        return { success: false, error: "No active program" };
+      }
+
+      try {
+        // Delete the user_programs entry to stop the program
+        const { error: deleteError } = await supabase
+          .from("user_programs")
+          .delete()
+          .eq("id", activeProgram.userProgram.id)
+          .eq("user_id", user.id);
+
+        if (deleteError) {
+          return { success: false, error: deleteError.message };
+        }
+
+        // Clear local state
+        setActiveProgram(null);
+        setWorkouts([]);
+        setCompletedWorkoutIds([]);
+
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+      }
+    },
+    [supabase, user?.id, activeProgram?.userProgram.id]
+  );
+
   // Refetch when screen comes into focus
   useFocusEffect(
     useCallback(() => {
@@ -221,5 +254,6 @@ export function useActiveProgram(): UseActiveProgramReturn {
     error,
     refetch: fetchActiveProgram,
     startProgram,
+    stopProgram,
   };
 }

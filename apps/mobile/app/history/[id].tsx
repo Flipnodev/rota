@@ -52,6 +52,23 @@ function formatVolume(volume: number): string {
   return Math.round(volume).toString();
 }
 
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins === 0) return `${secs}s`;
+  if (secs === 0) return `${mins}m`;
+  return `${mins}m ${secs}s`;
+}
+
+function formatDistance(meters: number): string {
+  if (meters >= 1000) {
+    return `${(meters / 1000).toFixed(2)}km`;
+  }
+  return `${meters}m`;
+}
+
+type ExerciseType = "strength" | "cardio" | "flexibility" | "other";
+
 function capitalizeFirst(str: string): string {
   return str
     .split("_")
@@ -196,115 +213,185 @@ export default function WorkoutDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Exercise Breakdown</Text>
 
-          {exercisesWithSets.map((exerciseData, exerciseIndex) => (
-            <View key={exerciseData.exercise.id} style={styles.exerciseCard}>
-              {/* Exercise Header */}
-              <View style={styles.exerciseHeader}>
-                <View style={styles.exerciseNumber}>
-                  <Text style={styles.exerciseNumberText}>
-                    {exerciseIndex + 1}
-                  </Text>
-                </View>
-                <View style={styles.exerciseInfo}>
-                  <Text style={styles.exerciseName}>
-                    {exerciseData.exercise.name}
-                  </Text>
-                  <Text style={styles.exerciseMeta}>
-                    {exerciseData.sets.length} sets ·{" "}
-                    {formatVolume(exerciseData.totalVolume)} kg volume
-                  </Text>
-                </View>
-              </View>
+          {exercisesWithSets.map((exerciseData, exerciseIndex) => {
+            const exerciseType = (exerciseData.exercise.exercise_type as ExerciseType) || "strength";
+            const isCardio = exerciseType === "cardio";
 
-              {/* Muscle Groups */}
-              {exerciseData.exercise.muscle_groups &&
-                exerciseData.exercise.muscle_groups.length > 0 && (
-                  <View style={styles.muscleGroups}>
-                    {exerciseData.exercise.muscle_groups.map((muscle) => (
-                      <View key={muscle} style={styles.muscleTag}>
-                        <Text style={styles.muscleTagText}>
-                          {capitalizeFirst(muscle)}
-                        </Text>
-                      </View>
-                    ))}
+            // Calculate totals for cardio
+            const totalDuration = exerciseData.sets.reduce(
+              (sum, s) => sum + (s.actual_duration_seconds || 0), 0
+            );
+            const totalDistance = exerciseData.sets.reduce(
+              (sum, s) => sum + (s.actual_distance_meters || 0), 0
+            );
+
+            return (
+              <View key={exerciseData.exercise.id} style={styles.exerciseCard}>
+                {/* Exercise Header */}
+                <View style={styles.exerciseHeader}>
+                  <View style={styles.exerciseNumber}>
+                    <Text style={styles.exerciseNumberText}>
+                      {exerciseIndex + 1}
+                    </Text>
                   </View>
-                )}
-
-              {/* Sets Table */}
-              <View style={styles.setsTable}>
-                <View style={styles.setsTableHeader}>
-                  <Text style={[styles.setsTableCell, styles.setCellNumber]}>
-                    Set
-                  </Text>
-                  <Text style={[styles.setsTableCell, styles.setCellWeight]}>
-                    Weight
-                  </Text>
-                  <Text style={[styles.setsTableCell, styles.setCellReps]}>
-                    Reps
-                  </Text>
-                  <Text style={[styles.setsTableCell, styles.setCellVolume]}>
-                    Volume
-                  </Text>
+                  <View style={styles.exerciseInfo}>
+                    <Text style={styles.exerciseName}>
+                      {exerciseData.exercise.name}
+                    </Text>
+                    <Text style={styles.exerciseMeta}>
+                      {exerciseData.sets.length} {isCardio ? "rounds" : "sets"} ·{" "}
+                      {isCardio
+                        ? `${formatDistance(totalDistance)}`
+                        : `${formatVolume(exerciseData.totalVolume)} kg volume`
+                      }
+                    </Text>
+                  </View>
+                  {isCardio && (
+                    <View style={styles.cardioBadge}>
+                      <Text style={styles.cardioBadgeText}>CARDIO</Text>
+                    </View>
+                  )}
                 </View>
 
-                {exerciseData.sets.map((setLog, setIndex) => {
-                  const setVolume = setLog.actual_weight * setLog.actual_reps;
-                  const targetReps = setLog.exercise_set?.target_reps;
-                  const targetWeight = setLog.exercise_set?.target_weight;
-                  const hitTarget =
-                    targetReps &&
-                    setLog.actual_reps >= targetReps &&
-                    (!targetWeight || setLog.actual_weight >= targetWeight);
-
-                  return (
-                    <View key={setLog.id} style={styles.setsTableRow}>
-                      <View style={[styles.setsTableCell, styles.setCellNumber]}>
-                        <Text style={styles.setNumber}>{setIndex + 1}</Text>
-                        {hitTarget && (
-                          <Check size={12} color={colors.emerald500} />
-                        )}
-                      </View>
-                      <View style={[styles.setsTableCell, styles.setCellWeight]}>
-                        <Text style={styles.setCellValue}>
-                          {formatWeight(setLog.actual_weight)} kg
-                        </Text>
-                        {targetWeight && (
-                          <Text style={styles.targetText}>
-                            / {formatWeight(targetWeight)}
+                {/* Muscle Groups */}
+                {exerciseData.exercise.muscle_groups &&
+                  exerciseData.exercise.muscle_groups.length > 0 && (
+                    <View style={styles.muscleGroups}>
+                      {exerciseData.exercise.muscle_groups.map((muscle) => (
+                        <View key={muscle} style={styles.muscleTag}>
+                          <Text style={styles.muscleTagText}>
+                            {capitalizeFirst(muscle)}
                           </Text>
-                        )}
-                      </View>
-                      <View style={[styles.setsTableCell, styles.setCellReps]}>
-                        <Text style={styles.setCellValue}>
-                          {setLog.actual_reps}
-                        </Text>
-                        {targetReps && (
-                          <Text style={styles.targetText}>/ {targetReps}</Text>
-                        )}
-                      </View>
-                      <Text
-                        style={[
-                          styles.setsTableCell,
-                          styles.setCellVolume,
-                          styles.setCellValue,
-                        ]}
-                      >
-                        {formatVolume(setVolume)}
-                      </Text>
+                        </View>
+                      ))}
                     </View>
-                  );
-                })}
+                  )}
 
-                {/* Exercise Summary Row */}
-                <View style={styles.exerciseSummaryRow}>
-                  <Text style={styles.exerciseSummaryLabel}>Total</Text>
-                  <Text style={styles.exerciseSummaryValue}>
-                    {exerciseData.totalReps} reps · {formatVolume(exerciseData.totalVolume)} kg
-                  </Text>
+                {/* Sets Table */}
+                <View style={styles.setsTable}>
+                  <View style={styles.setsTableHeader}>
+                    <Text style={[styles.setsTableCell, styles.setCellNumber]}>
+                      {isCardio ? "Round" : "Set"}
+                    </Text>
+                    {isCardio ? (
+                      <>
+                        <Text style={[styles.setsTableCell, styles.setCellWeight]}>
+                          Duration
+                        </Text>
+                        <Text style={[styles.setsTableCell, styles.setCellReps]}>
+                          Distance
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={[styles.setsTableCell, styles.setCellWeight]}>
+                          Weight
+                        </Text>
+                        <Text style={[styles.setsTableCell, styles.setCellReps]}>
+                          Reps
+                        </Text>
+                        <Text style={[styles.setsTableCell, styles.setCellVolume]}>
+                          Volume
+                        </Text>
+                      </>
+                    )}
+                  </View>
+
+                  {exerciseData.sets.map((setLog, setIndex) => {
+                    if (isCardio) {
+                      const targetDuration = setLog.exercise_set?.target_duration_seconds;
+                      const targetDistance = setLog.exercise_set?.target_distance_meters;
+
+                      return (
+                        <View key={setLog.id} style={styles.setsTableRow}>
+                          <View style={[styles.setsTableCell, styles.setCellNumber]}>
+                            <Text style={styles.setNumber}>{setIndex + 1}</Text>
+                          </View>
+                          <View style={[styles.setsTableCell, styles.setCellWeight]}>
+                            <Text style={styles.setCellValue}>
+                              {formatDuration(setLog.actual_duration_seconds || 0)}
+                            </Text>
+                            {targetDuration && (
+                              <Text style={styles.targetText}>
+                                / {formatDuration(targetDuration)}
+                              </Text>
+                            )}
+                          </View>
+                          <View style={[styles.setsTableCell, styles.setCellReps]}>
+                            <Text style={styles.setCellValue}>
+                              {formatDistance(setLog.actual_distance_meters || 0)}
+                            </Text>
+                            {targetDistance && (
+                              <Text style={styles.targetText}>
+                                / {formatDistance(targetDistance)}
+                              </Text>
+                            )}
+                          </View>
+                        </View>
+                      );
+                    }
+
+                    const setVolume = setLog.actual_weight * setLog.actual_reps;
+                    const targetReps = setLog.exercise_set?.target_reps;
+                    const targetWeight = setLog.exercise_set?.target_weight;
+                    const hitTarget =
+                      targetReps &&
+                      setLog.actual_reps >= targetReps &&
+                      (!targetWeight || setLog.actual_weight >= targetWeight);
+
+                    return (
+                      <View key={setLog.id} style={styles.setsTableRow}>
+                        <View style={[styles.setsTableCell, styles.setCellNumber]}>
+                          <Text style={styles.setNumber}>{setIndex + 1}</Text>
+                          {hitTarget && (
+                            <Check size={12} color={colors.emerald500} />
+                          )}
+                        </View>
+                        <View style={[styles.setsTableCell, styles.setCellWeight]}>
+                          <Text style={styles.setCellValue}>
+                            {formatWeight(setLog.actual_weight)} kg
+                          </Text>
+                          {targetWeight && (
+                            <Text style={styles.targetText}>
+                              / {formatWeight(targetWeight)}
+                            </Text>
+                          )}
+                        </View>
+                        <View style={[styles.setsTableCell, styles.setCellReps]}>
+                          <Text style={styles.setCellValue}>
+                            {setLog.actual_reps}
+                          </Text>
+                          {targetReps && (
+                            <Text style={styles.targetText}>/ {targetReps}</Text>
+                          )}
+                        </View>
+                        <Text
+                          style={[
+                            styles.setsTableCell,
+                            styles.setCellVolume,
+                            styles.setCellValue,
+                          ]}
+                        >
+                          {formatVolume(setVolume)}
+                        </Text>
+                      </View>
+                    );
+                  })}
+
+                  {/* Exercise Summary Row */}
+                  <View style={styles.exerciseSummaryRow}>
+                    <Text style={styles.exerciseSummaryLabel}>Total</Text>
+                    <Text style={styles.exerciseSummaryValue}>
+                      {isCardio
+                        ? `${formatDuration(totalDuration)} · ${formatDistance(totalDistance)}`
+                        : `${exerciseData.totalReps} reps · ${formatVolume(exerciseData.totalVolume)} kg`
+                      }
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         {/* Bottom Padding */}
@@ -527,6 +614,17 @@ const styles = StyleSheet.create({
   exerciseMeta: {
     fontSize: fontSize.xs,
     color: colors.zinc500,
+  },
+  cardioBadge: {
+    backgroundColor: colors.emeraldAlpha20,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+  },
+  cardioBadgeText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.medium,
+    color: colors.emerald500,
   },
   muscleGroups: {
     flexDirection: "row",

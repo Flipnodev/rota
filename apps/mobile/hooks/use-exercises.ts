@@ -30,6 +30,7 @@ export function useExercises(options: UseExercisesOptions = {}): UseExercisesRet
       let query = supabase
         .from("exercises")
         .select("*")
+        .eq("is_custom", false) // Only fetch non-custom exercises (allowed by RLS)
         .order("name", { ascending: true });
 
       // Filter by muscle group if specified
@@ -45,11 +46,14 @@ export function useExercises(options: UseExercisesOptions = {}): UseExercisesRet
       const { data, error: queryError } = await query;
 
       if (queryError) {
+        console.error("[useExercises] Query error:", queryError);
         throw new Error(queryError.message);
       }
 
+      console.log("[useExercises] Fetched", data?.length ?? 0, "exercises");
       setExercises(data || []);
     } catch (err) {
+      console.error("[useExercises] Fetch error:", err);
       setError(err instanceof Error ? err : new Error("Failed to fetch exercises"));
     } finally {
       setIsLoading(false);

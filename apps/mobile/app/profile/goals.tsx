@@ -5,9 +5,9 @@ import {
   StyleSheet,
   Pressable,
   ActivityIndicator,
-  Alert,
   ScrollView,
 } from "react-native";
+import { showAlert, showError } from "@/lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
@@ -44,7 +44,7 @@ export default function GoalsScreen() {
 
   const handleSave = async () => {
     if (!selectedGoal) {
-      Alert.alert("Error", "Please select a fitness goal");
+      showError("Error", "Please select a fitness goal");
       return;
     }
 
@@ -56,12 +56,12 @@ export default function GoalsScreen() {
         fitness_goal: selectedGoal,
       };
       await updateProfile({ onboarding_data: updatedData });
-      Alert.alert("Success", "Fitness goal updated successfully", [
+      showAlert("Success", "Fitness goal updated successfully", [
         { text: "OK", onPress: () => router.back() },
       ]);
     } catch (error) {
       console.error("Failed to update goal:", error);
-      Alert.alert("Error", "Failed to update goal. Please try again.");
+      showError("Error", "Failed to update goal. Please try again.");
     } finally {
       setIsSaving(false);
     }

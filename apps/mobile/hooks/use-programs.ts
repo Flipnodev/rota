@@ -25,6 +25,7 @@ interface UseProgramsReturn {
   programs: Program[];
   activeProgram: Program | null;
   templatePrograms: Program[];
+  userPrograms: Program[];
   isPremium: boolean;
   isLoading: boolean;
   error: Error | null;
@@ -122,10 +123,14 @@ export function usePrograms(): UseProgramsReturn {
   // Template programs for the library
   const templatePrograms = programs.filter((p) => p.is_template);
 
+  // User's own programs (non-template)
+  const userPrograms = programs.filter((p) => !p.is_template && p.user_id === user?.id);
+
   return {
     programs,
     activeProgram,
     templatePrograms,
+    userPrograms,
     isPremium,
     isLoading: isLoading || subscriptionLoading,
     error,

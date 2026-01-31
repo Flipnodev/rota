@@ -5,9 +5,9 @@ import {
   StyleSheet,
   Pressable,
   ActivityIndicator,
-  Alert,
   ScrollView,
 } from "react-native";
+import { showAlert, showError } from "@/lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
@@ -45,7 +45,7 @@ export default function ScheduleScreen() {
 
   const handleSave = async () => {
     if (!selectedSchedule) {
-      Alert.alert("Error", "Please select a workout schedule");
+      showError("Error", "Please select a workout schedule");
       return;
     }
 
@@ -57,12 +57,12 @@ export default function ScheduleScreen() {
         preferred_schedule: selectedSchedule,
       };
       await updateProfile({ onboarding_data: updatedData });
-      Alert.alert("Success", "Workout schedule updated successfully", [
+      showAlert("Success", "Workout schedule updated successfully", [
         { text: "OK", onPress: () => router.back() },
       ]);
     } catch (error) {
       console.error("Failed to update schedule:", error);
-      Alert.alert("Error", "Failed to update schedule. Please try again.");
+      showError("Error", "Failed to update schedule. Please try again.");
     } finally {
       setIsSaving(false);
     }

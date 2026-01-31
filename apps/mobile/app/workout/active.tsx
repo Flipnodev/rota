@@ -6,11 +6,10 @@ import {
   Pressable,
   ActivityIndicator,
   TextInput,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
 import { X, Check, Clock, ChevronRight, Pause, Play } from "@/components/icons";
@@ -21,6 +20,7 @@ import {
 } from "@/hooks/use-workout-session";
 import { useDatabase } from "@/providers/database-provider";
 import { useAuth } from "@/providers/auth-provider";
+import { showAlert, showError } from "@/lib/alert";
 
 function formatRestTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -28,9 +28,28 @@ function formatRestTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
+type ExerciseType = "strength" | "cardio" | "flexibility" | "other";
+
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins === 0) return `${secs}s`;
+  if (secs === 0) return `${mins}m`;
+  return `${mins}m ${secs}s`;
+}
+
+function formatDistance(meters: number): string {
+  if (meters >= 1000) {
+    return `${(meters / 1000).toFixed(1)}km`;
+  }
+  return `${meters}m`;
+}
+
 interface SetInputState {
   reps: string;
   weight: string;
+  durationMinutes: string;
+  distanceMeters: string;
 }
 
 export default function ActiveWorkoutScreen() {
@@ -78,6 +97,8 @@ export default function ActiveWorkoutScreen() {
   );
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasPromptedFinish, setHasPromptedFinish] = useState(false);
+  const [lastWeights, setLastWeights] = useState<Map<string, number>>(new Map());
+  const lastWeightsFetched = useRef(false);
 
   // Check if this workout was already completed today
   useEffect(() => {
@@ -154,7 +175,7 @@ export default function ActiveWorkoutScreen() {
       setIsInitialized(true);
       loadWorkout(workoutId, programId, templateProgramId).then((success) => {
         if (!success) {
-          Alert.alert("Error", "Failed to load workout", [
+          showAlert("Error", "Failed to load workout", [
             { text: "OK", onPress: () => router.back() },
           ]);
         }
@@ -162,21 +183,79 @@ export default function ActiveWorkoutScreen() {
     }
   }, [workoutId, programId, templateProgramId, loadWorkout, isInitialized, checkingCompletion, isAlreadyCompleted, router]);
 
-  // Initialize set inputs when workout loads
+  // Fetch user's last weights for each exercise
+  useEffect(() => {
+    const fetchLastWeights = async () => {
+      if (!workout?.workout_exercises || !user?.id || lastWeightsFetched.current) {
+        return;
+      }
+
+      lastWeightsFetched.current = true;
+
+      // Get unique exercise IDs from this workout
+      const exerciseIds = workout.workout_exercises
+        .map((we) => we.exercise_id)
+        .filter((id, index, arr) => arr.indexOf(id) === index);
+
+      if (exerciseIds.length === 0) return;
+
+      try {
+        // Fetch the most recent set_log for each exercise (through workout_logs for user filtering)
+        const { data } = await supabase
+          .from("set_logs")
+          .select(`
+            exercise_id,
+            actual_weight,
+            workout_log:workout_logs!inner(user_id)
+          `)
+          .eq("workout_log.user_id", user.id)
+          .in("exercise_id", exerciseIds)
+          .gt("actual_weight", 0)
+          .order("completed_at", { ascending: false });
+
+        if (data && data.length > 0) {
+          const weights = new Map<string, number>();
+          // Use the first (most recent) weight for each exercise
+          data.forEach((log) => {
+            if (!weights.has(log.exercise_id)) {
+              weights.set(log.exercise_id, log.actual_weight);
+            }
+          });
+          setLastWeights(weights);
+        }
+      } catch (err) {
+        // Silently fail - user will just see 0 or target weight
+        console.log("Failed to fetch last weights:", err);
+      }
+    };
+
+    fetchLastWeights();
+  }, [workout, user?.id, supabase]);
+
+  // Initialize set inputs when workout loads (uses lastWeights if available)
   useEffect(() => {
     if (workout?.workout_exercises) {
       const newInputs = new Map<string, SetInputState>();
       workout.workout_exercises.forEach((we) => {
+        // Get last weight for this exercise (if user has done it before)
+        const lastWeight = lastWeights.get(we.exercise_id);
+
         we.sets?.forEach((set) => {
+          // Priority: target_weight > lastWeight > 0
+          const weight = set.target_weight ?? lastWeight ?? 0;
+          const durationMins = set.target_duration_seconds ? Math.floor(set.target_duration_seconds / 60) : 0;
+          const distanceM = set.target_distance_meters ?? 0;
           newInputs.set(set.id, {
             reps: set.target_reps.toString(),
-            weight: (set.target_weight || 0).toString(),
+            weight: weight.toString(),
+            durationMinutes: durationMins.toString(),
+            distanceMeters: distanceM.toString(),
           });
         });
       });
       setSetInputs(newInputs);
     }
-  }, [workout]);
+  }, [workout, lastWeights]);
 
   const exercises = workout?.workout_exercises || [];
   const currentExercise = exercises[currentExerciseIndex];
@@ -193,7 +272,7 @@ export default function ActiveWorkoutScreen() {
   );
 
   const handleSetComplete = useCallback(
-    async (setId: string, exerciseId: string, restSeconds?: number) => {
+    async (setId: string, exerciseId: string, exerciseType: ExerciseType, restSeconds?: number) => {
       const isCompleted = completedSets.has(setId);
 
       if (isCompleted) {
@@ -204,14 +283,19 @@ export default function ActiveWorkoutScreen() {
         const inputs = setInputs.get(setId);
         if (!inputs) return;
 
-        const reps = parseInt(inputs.reps, 10) || 0;
+        const isCardio = exerciseType === "cardio";
+        const reps = parseInt(inputs.reps, 10) || (isCardio ? 1 : 0);
         const weight = parseFloat(inputs.weight) || 0;
+        const durationSeconds = isCardio ? (parseInt(inputs.durationMinutes, 10) || 0) * 60 : null;
+        const distanceMeters = isCardio ? parseInt(inputs.distanceMeters, 10) || 0 : null;
 
         const success = await completeSet({
           exercise_set_id: setId,
           exercise_id: exerciseId,
           actual_reps: reps,
           actual_weight: weight,
+          actual_duration_seconds: durationSeconds,
+          actual_distance_meters: distanceMeters,
         });
 
         // Start rest timer if set completed successfully and rest time is specified
@@ -224,10 +308,10 @@ export default function ActiveWorkoutScreen() {
   );
 
   const handleInputChange = useCallback(
-    (setId: string, field: "reps" | "weight", value: string) => {
+    (setId: string, field: "reps" | "weight" | "durationMinutes" | "distanceMeters", value: string) => {
       setSetInputs((prev) => {
         const next = new Map(prev);
-        const current = next.get(setId) || { reps: "0", weight: "0" };
+        const current = next.get(setId) || { reps: "0", weight: "0", durationMinutes: "0", distanceMeters: "0" };
         next.set(setId, { ...current, [field]: value });
         return next;
       });
@@ -253,7 +337,7 @@ export default function ActiveWorkoutScreen() {
         },
       });
     } else {
-      Alert.alert("Error", "Failed to complete workout");
+      showError("Error", "Failed to complete workout");
     }
   }, [finishWorkout, router]);
 
@@ -264,7 +348,7 @@ export default function ActiveWorkoutScreen() {
       0
     );
 
-    Alert.alert(
+    showAlert(
       "Finish Workout?",
       `You've completed ${completedCount} of ${totalSets} sets.\n\nTime: ${formatElapsedTime(elapsedSeconds)}`,
       [
@@ -306,7 +390,7 @@ export default function ActiveWorkoutScreen() {
   }, [isWorkoutComplete, isWorkoutStarted, exercises.length, hasPromptedFinish, handleFinishPrompt]);
 
   const handleCancel = useCallback(() => {
-    Alert.alert(
+    showAlert(
       "Cancel Workout",
       "Are you sure you want to cancel this workout? Your progress will not be saved.",
       [
@@ -410,7 +494,7 @@ export default function ActiveWorkoutScreen() {
     const handleStartWorkout = async () => {
       const success = await beginWorkout();
       if (!success) {
-        Alert.alert("Error", "Failed to start workout. Please try again.");
+        showError("Error", "Failed to start workout. Please try again.");
       }
     };
 
@@ -568,74 +652,128 @@ export default function ActiveWorkoutScreen() {
             </Pressable>
 
             {/* Sets */}
-            <View style={styles.setsHeader}>
-              <Text style={styles.setsHeaderText}>SET</Text>
-              <Text style={styles.setsHeaderText}>TARGET</Text>
-              <Text style={styles.setsHeaderText}>KG</Text>
-              <Text style={styles.setsHeaderText}>REPS</Text>
-              <View style={styles.setsHeaderSpacer} />
-            </View>
-
-            {currentExercise.sets?.map((set, index) => {
-              const isCompleted = completedSets.has(set.id);
-              const inputs = setInputs.get(set.id) || {
-                reps: "0",
-                weight: "0",
-              };
+            {(() => {
+              const exerciseType = (currentExercise.exercise?.exercise_type as ExerciseType) || "strength";
+              const isCardio = exerciseType === "cardio";
 
               return (
-                <View
-                  key={set.id}
-                  style={[styles.setRow, isCompleted && styles.setRowCompleted]}
-                >
-                  <View style={styles.setNumber}>
-                    <Text style={styles.setNumberText}>{index + 1}</Text>
+                <>
+                  <View style={styles.setsHeader}>
+                    <Text style={styles.setsHeaderText}>{isCardio ? "ROUND" : "SET"}</Text>
+                    <Text style={styles.setsHeaderText}>TARGET</Text>
+                    {isCardio ? (
+                      <>
+                        <Text style={styles.setsHeaderText}>MIN</Text>
+                        <Text style={styles.setsHeaderText}>DIST</Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.setsHeaderText}>KG</Text>
+                        <Text style={styles.setsHeaderText}>REPS</Text>
+                      </>
+                    )}
+                    <View style={styles.setsHeaderSpacer} />
                   </View>
-                  <Text style={styles.setPrevious}>
-                    {set.target_weight || 0} x {set.target_reps}
-                  </Text>
-                  <View style={styles.setInput}>
-                    <TextInput
-                      style={styles.setInputText}
-                      value={inputs.weight}
-                      onChangeText={(value) =>
-                        handleInputChange(set.id, "weight", value)
-                      }
-                      keyboardType="numeric"
-                      editable={!isCompleted}
-                      selectTextOnFocus
-                    />
-                  </View>
-                  <View style={styles.setInput}>
-                    <TextInput
-                      style={styles.setInputText}
-                      value={inputs.reps}
-                      onChangeText={(value) =>
-                        handleInputChange(set.id, "reps", value)
-                      }
-                      keyboardType="numeric"
-                      editable={!isCompleted}
-                      selectTextOnFocus
-                    />
-                  </View>
-                  <Pressable
-                    style={[
-                      styles.setCheckButton,
-                      isCompleted && styles.setCheckButtonCompleted,
-                    ]}
-                    onPress={() =>
-                      handleSetComplete(set.id, currentExercise.exercise_id, set.rest_seconds)
-                    }
-                    disabled={isSaving}
-                  >
-                    <Check
-                      size={16}
-                      color={isCompleted ? colors.black : colors.zinc600}
-                    />
-                  </Pressable>
-                </View>
+
+                  {currentExercise.sets?.map((set, index) => {
+                    const isCompleted = completedSets.has(set.id);
+                    const inputs = setInputs.get(set.id) || {
+                      reps: "0",
+                      weight: "0",
+                      durationMinutes: "0",
+                      distanceMeters: "0",
+                    };
+
+                    // Format target display based on exercise type
+                    const targetDisplay = isCardio
+                      ? `${formatDuration(set.target_duration_seconds || 0)}`
+                      : `${set.target_weight || 0} x ${set.target_reps}`;
+
+                    return (
+                      <View
+                        key={set.id}
+                        style={[styles.setRow, isCompleted && styles.setRowCompleted]}
+                      >
+                        <View style={styles.setNumber}>
+                          <Text style={styles.setNumberText}>{index + 1}</Text>
+                        </View>
+                        <Text style={styles.setPrevious}>{targetDisplay}</Text>
+                        {isCardio ? (
+                          <>
+                            <View style={styles.setInput}>
+                              <TextInput
+                                style={styles.setInputText}
+                                value={inputs.durationMinutes}
+                                onChangeText={(value) =>
+                                  handleInputChange(set.id, "durationMinutes", value)
+                                }
+                                keyboardType="numeric"
+                                editable={!isCompleted}
+                                selectTextOnFocus
+                              />
+                            </View>
+                            <View style={styles.setInput}>
+                              <TextInput
+                                style={styles.setInputText}
+                                value={inputs.distanceMeters}
+                                onChangeText={(value) =>
+                                  handleInputChange(set.id, "distanceMeters", value)
+                                }
+                                keyboardType="numeric"
+                                editable={!isCompleted}
+                                selectTextOnFocus
+                              />
+                            </View>
+                          </>
+                        ) : (
+                          <>
+                            <View style={styles.setInput}>
+                              <TextInput
+                                style={styles.setInputText}
+                                value={inputs.weight}
+                                onChangeText={(value) =>
+                                  handleInputChange(set.id, "weight", value)
+                                }
+                                keyboardType="numeric"
+                                editable={!isCompleted}
+                                selectTextOnFocus
+                              />
+                            </View>
+                            <View style={styles.setInput}>
+                              <TextInput
+                                style={styles.setInputText}
+                                value={inputs.reps}
+                                onChangeText={(value) =>
+                                  handleInputChange(set.id, "reps", value)
+                                }
+                                keyboardType="numeric"
+                                editable={!isCompleted}
+                                selectTextOnFocus
+                              />
+                            </View>
+                          </>
+                        )}
+                        <Pressable
+                          style={[
+                            styles.setCheckButton,
+                            isCompleted && styles.setCheckButtonCompleted,
+                          ]}
+                          onPress={() =>
+                            handleSetComplete(set.id, currentExercise.exercise_id, exerciseType, set.rest_seconds)
+                          }
+                          disabled={isSaving}
+                        >
+                          <Check
+                            size={16}
+                            color={isCompleted ? colors.black : colors.zinc600}
+                          />
+                        </Pressable>
+                      </View>
+                    );
+                  })}
+                </>
               );
-            })}
+            })()}
 
             {/* Notes */}
             {currentExercise.notes && (

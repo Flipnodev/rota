@@ -52,6 +52,7 @@ export type Database = {
           muscle_groups: Database['public']['Enums']['muscle_group'][];
           equipment: Database['public']['Enums']['equipment_type'][];
           instructions: string[] | null;
+          exercise_type: Database['public']['Enums']['exercise_type'];
           is_custom: boolean;
           created_by: string | null;
           created_at: string;
@@ -64,6 +65,7 @@ export type Database = {
           muscle_groups?: Database['public']['Enums']['muscle_group'][];
           equipment?: Database['public']['Enums']['equipment_type'][];
           instructions?: string[] | null;
+          exercise_type?: Database['public']['Enums']['exercise_type'];
           is_custom?: boolean;
           created_by?: string | null;
           created_at?: string;
@@ -76,6 +78,7 @@ export type Database = {
           muscle_groups?: Database['public']['Enums']['muscle_group'][];
           equipment?: Database['public']['Enums']['equipment_type'][];
           instructions?: string[] | null;
+          exercise_type?: Database['public']['Enums']['exercise_type'];
           is_custom?: boolean;
           created_by?: string | null;
           created_at?: string;
@@ -194,6 +197,8 @@ export type Database = {
           set_number: number;
           target_reps: number;
           target_weight: number | null;
+          target_duration_seconds: number | null;
+          target_distance_meters: number | null;
           rest_seconds: number;
           created_at: string;
         };
@@ -203,6 +208,8 @@ export type Database = {
           set_number: number;
           target_reps: number;
           target_weight?: number | null;
+          target_duration_seconds?: number | null;
+          target_distance_meters?: number | null;
           rest_seconds?: number;
           created_at?: string;
         };
@@ -212,6 +219,8 @@ export type Database = {
           set_number?: number;
           target_reps?: number;
           target_weight?: number | null;
+          target_duration_seconds?: number | null;
+          target_distance_meters?: number | null;
           rest_seconds?: number;
           created_at?: string;
         };
@@ -259,6 +268,8 @@ export type Database = {
           exercise_id: string;
           actual_reps: number;
           actual_weight: number;
+          actual_duration_seconds: number | null;
+          actual_distance_meters: number | null;
           rpe: number | null;
           completed_at: string;
         };
@@ -269,6 +280,8 @@ export type Database = {
           exercise_id: string;
           actual_reps: number;
           actual_weight?: number;
+          actual_duration_seconds?: number | null;
+          actual_distance_meters?: number | null;
           rpe?: number | null;
           completed_at?: string;
         };
@@ -279,6 +292,8 @@ export type Database = {
           exercise_id?: string;
           actual_reps?: number;
           actual_weight?: number;
+          actual_duration_seconds?: number | null;
+          actual_distance_meters?: number | null;
           rpe?: number | null;
           completed_at?: string;
         };
@@ -518,6 +533,7 @@ export type Database = {
         | 'bench'
         | 'pull_up_bar'
         | 'none';
+      exercise_type: 'strength' | 'cardio' | 'flexibility' | 'other';
       subscription_status: 'active' | 'cancelled' | 'expired' | 'trial';
       subscription_plan: 'free' | 'premium' | 'lifetime';
       subscription_provider: 'apple' | 'google' | 'stripe' | 'manual';

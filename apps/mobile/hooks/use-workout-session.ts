@@ -25,6 +25,8 @@ export interface SetLogInput {
   exercise_id: string;
   actual_reps: number;
   actual_weight: number;
+  actual_duration_seconds?: number | null;
+  actual_distance_meters?: number | null;
 }
 
 export interface WorkoutSessionData {
@@ -325,6 +327,8 @@ export function useWorkoutSession(): UseWorkoutSessionReturn {
             exercise_id: setData.exercise_id,
             actual_reps: setData.actual_reps,
             actual_weight: setData.actual_weight,
+            actual_duration_seconds: setData.actual_duration_seconds,
+            actual_distance_meters: setData.actual_distance_meters,
             completed_at: new Date().toISOString(),
           })
           .select()
