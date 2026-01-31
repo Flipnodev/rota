@@ -37,6 +37,7 @@ export default function TabLayout() {
         name="workout"
         options={{
           title: "Workout",
+          tabBarLabel: () => null,
           tabBarIcon: ({ color, size }) => (
             <View style={styles.workoutIconContainer}>
               <Play size={size - 4} color={colors.black} />

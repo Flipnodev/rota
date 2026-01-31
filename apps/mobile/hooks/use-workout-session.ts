@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useDatabase } from "@/providers/database-provider";
 import { useAuth } from "@/providers/auth-provider";
+import { useActiveProgram } from "@/hooks/use-active-program";
 import type {
   Workout,
   WorkoutExercise,
@@ -44,22 +45,33 @@ interface UseWorkoutSessionReturn {
   isLoading: boolean;
   isSaving: boolean;
   error: Error | null;
+  isPaused: boolean;
+  restSeconds: number;
+  isResting: boolean;
+  isTimerRunning: boolean;
+  isWorkoutStarted: boolean;
 
   // Actions
-  startSession: (workoutId: string, programId?: string) => Promise<boolean>;
+  loadWorkout: (workoutId: string, programId?: string, templateProgramId?: string) => Promise<boolean>;
+  beginWorkout: () => Promise<boolean>;
   completeSet: (setData: SetLogInput) => Promise<boolean>;
   uncompleteSet: (exerciseSetId: string) => Promise<boolean>;
   finishWorkout: () => Promise<WorkoutSessionData | null>;
   cancelWorkout: () => Promise<void>;
+  togglePause: () => void;
+  startRestTimer: (seconds: number) => void;
+  stopRestTimer: () => void;
 }
 
 export function useWorkoutSession(): UseWorkoutSessionReturn {
   const { supabase } = useDatabase();
   const { user } = useAuth();
+  const { startProgram } = useActiveProgram();
 
   const [workout, setWorkout] = useState<WorkoutWithExercises | null>(null);
   const [workoutLogId, setWorkoutLogId] = useState<string | null>(null);
   const [programId, setProgramId] = useState<string | null>(null);
+  const [templateProgramId, setTemplateProgramId] = useState<string | null>(null);
   const [completedSets, setCompletedSets] = useState<Map<string, SetLog>>(
     new Map()
   );
@@ -67,17 +79,26 @@ export function useWorkoutSession(): UseWorkoutSessionReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [restSeconds, setRestSeconds] = useState(0);
+  const [isResting, setIsResting] = useState(false);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [isWorkoutStarted, setIsWorkoutStarted] = useState(false);
+  const [pendingWorkoutId, setPendingWorkoutId] = useState<string | null>(null);
 
   const startTimeRef = useRef<Date | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pausedAtRef = useRef<number>(0);
+  const totalPausedTimeRef = useRef<number>(0);
+  const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Timer effect
+  // Timer effect - respects pause state and isTimerRunning
   useEffect(() => {
-    if (workoutLogId && startTimeRef.current) {
+    if (isWorkoutStarted && startTimeRef.current && !isPaused && isTimerRunning) {
       timerRef.current = setInterval(() => {
         const now = new Date();
         const diff = Math.floor(
-          (now.getTime() - startTimeRef.current!.getTime()) / 1000
+          (now.getTime() - startTimeRef.current!.getTime() - totalPausedTimeRef.current) / 1000
         );
         setElapsedSeconds(diff);
       }, 1000);
@@ -88,10 +109,60 @@ export function useWorkoutSession(): UseWorkoutSessionReturn {
         clearInterval(timerRef.current);
       }
     };
-  }, [workoutLogId]);
+  }, [isWorkoutStarted, isPaused, isTimerRunning]);
 
-  const startSession = useCallback(
-    async (workoutId: string, programIdParam?: string): Promise<boolean> => {
+  // Toggle pause/resume
+  const togglePause = useCallback(() => {
+    if (isPaused) {
+      // Resume - add paused duration to total
+      const pausedDuration = Date.now() - pausedAtRef.current;
+      totalPausedTimeRef.current += pausedDuration;
+      setIsPaused(false);
+    } else {
+      // Pause - record when we paused
+      pausedAtRef.current = Date.now();
+      setIsPaused(true);
+    }
+  }, [isPaused]);
+
+  // Rest timer functions
+  const startRestTimer = useCallback((seconds: number) => {
+    // Clear any existing rest timer
+    if (restTimerRef.current) {
+      clearInterval(restTimerRef.current);
+    }
+
+    setRestSeconds(seconds);
+    setIsResting(true);
+
+    restTimerRef.current = setInterval(() => {
+      setRestSeconds((prev) => {
+        if (prev <= 1) {
+          // Timer complete
+          if (restTimerRef.current) {
+            clearInterval(restTimerRef.current);
+            restTimerRef.current = null;
+          }
+          setIsResting(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const stopRestTimer = useCallback(() => {
+    if (restTimerRef.current) {
+      clearInterval(restTimerRef.current);
+      restTimerRef.current = null;
+    }
+    setRestSeconds(0);
+    setIsResting(false);
+  }, []);
+
+  // Load workout data for preview (does NOT create a workout log)
+  const loadWorkout = useCallback(
+    async (workoutId: string, programIdParam?: string, templateProgramIdParam?: string): Promise<boolean> => {
       if (!user?.id) {
         setError(new Error("User not authenticated"));
         return false;
@@ -140,34 +211,27 @@ export function useWorkoutSession(): UseWorkoutSessionReturn {
           );
         }
 
-        // Create workout log entry
-        const startTime = new Date();
-        const { data: logData, error: logError } = await supabase
-          .from("workout_logs")
-          .insert({
-            user_id: user.id,
-            workout_id: workoutId,
-            program_id: programIdParam || null,
-            started_at: startTime.toISOString(),
-          })
-          .select()
-          .single();
-
-        if (logError) {
-          throw new Error(logError.message);
-        }
-
+        // Just store workout data - don't create log yet
         setWorkout(workoutData as WorkoutWithExercises);
-        setWorkoutLogId(logData.id);
+        setPendingWorkoutId(workoutId);
         setProgramId(programIdParam || null);
-        startTimeRef.current = startTime;
+        setTemplateProgramId(templateProgramIdParam || null);
+        setWorkoutLogId(null);
+        setIsWorkoutStarted(false);
         setCompletedSets(new Map());
         setElapsedSeconds(0);
+        setIsPaused(false);
+        setIsTimerRunning(false);
+        pausedAtRef.current = 0;
+        totalPausedTimeRef.current = 0;
+        setRestSeconds(0);
+        setIsResting(false);
+        startTimeRef.current = null;
 
         return true;
       } catch (err) {
         setError(
-          err instanceof Error ? err : new Error("Failed to start workout")
+          err instanceof Error ? err : new Error("Failed to load workout")
         );
         return false;
       } finally {
@@ -176,6 +240,71 @@ export function useWorkoutSession(): UseWorkoutSessionReturn {
     },
     [supabase, user?.id]
   );
+
+  // Begin workout - starts the program if needed, creates the workout log, and starts the timer
+  const beginWorkout = useCallback(async (): Promise<boolean> => {
+    if (!user?.id) {
+      setError(new Error("User not authenticated"));
+      return false;
+    }
+
+    if (!workout || !pendingWorkoutId) {
+      setError(new Error("No workout loaded"));
+      return false;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      let finalProgramId = programId;
+
+      // If this is a template program, start it first (links user to program)
+      if (templateProgramId) {
+        const result = await startProgram(templateProgramId);
+        if (!result.success) {
+          throw new Error(result.error || "Failed to start program");
+        }
+        // Use the program ID from the result (same as template since we don't copy)
+        finalProgramId = result.programId || templateProgramId;
+      }
+
+      // Create workout log entry
+      const startTime = new Date();
+      const { data: logData, error: logError } = await supabase
+        .from("workout_logs")
+        .insert({
+          user_id: user.id,
+          workout_id: pendingWorkoutId,
+          program_id: finalProgramId || null,
+          started_at: startTime.toISOString(),
+        })
+        .select()
+        .single();
+
+      if (logError) {
+        throw new Error(logError.message);
+      }
+
+      // Now the workout has officially started
+      setWorkoutLogId(logData.id);
+      setProgramId(finalProgramId);
+      setTemplateProgramId(null); // Clear template flag
+      setIsWorkoutStarted(true);
+      setIsTimerRunning(true);
+      startTimeRef.current = startTime;
+      totalPausedTimeRef.current = 0;
+
+      return true;
+    } catch (err) {
+      setError(
+        err instanceof Error ? err : new Error("Failed to start workout")
+      );
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [supabase, user?.id, workout, pendingWorkoutId, programId, templateProgramId, startProgram]);
 
   const completeSet = useCallback(
     async (setData: SetLogInput): Promise<boolean> => {
@@ -262,7 +391,7 @@ export function useWorkoutSession(): UseWorkoutSessionReturn {
   );
 
   const finishWorkout = useCallback(async (): Promise<WorkoutSessionData | null> => {
-    if (!workoutLogId || !workout || !startTimeRef.current) {
+    if (!workoutLogId || !workout || !startTimeRef.current || !isWorkoutStarted) {
       setError(new Error("No active workout session"));
       return null;
     }
@@ -289,10 +418,14 @@ export function useWorkoutSession(): UseWorkoutSessionReturn {
         throw new Error(updateError.message);
       }
 
-      // Clear timer
+      // Clear timers
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
+      }
+      if (restTimerRef.current) {
+        clearInterval(restTimerRef.current);
+        restTimerRef.current = null;
       }
 
       const sessionData: WorkoutSessionData = {
@@ -308,9 +441,18 @@ export function useWorkoutSession(): UseWorkoutSessionReturn {
       setWorkout(null);
       setWorkoutLogId(null);
       setProgramId(null);
+      setTemplateProgramId(null);
+      setPendingWorkoutId(null);
+      setIsWorkoutStarted(false);
       setCompletedSets(new Map());
       setElapsedSeconds(0);
+      setIsPaused(false);
+      setIsTimerRunning(false);
+      setRestSeconds(0);
+      setIsResting(false);
       startTimeRef.current = null;
+      pausedAtRef.current = 0;
+      totalPausedTimeRef.current = 0;
 
       return sessionData;
     } catch (err) {
@@ -324,24 +466,54 @@ export function useWorkoutSession(): UseWorkoutSessionReturn {
   }, [supabase, workoutLogId, workout, completedSets]);
 
   const cancelWorkout = useCallback(async (): Promise<void> => {
-    // Stop timer
+    // Stop timers
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    if (restTimerRef.current) {
+      clearInterval(restTimerRef.current);
+      restTimerRef.current = null;
+    }
 
-    // If there's a workout log, we could either delete it or leave it as incomplete
-    // For now, we'll leave it as incomplete (no completed_at)
+    // If workout was actually started (log exists), delete it
+    if (workoutLogId && isWorkoutStarted) {
+      try {
+        // Delete set logs first (foreign key constraint)
+        await supabase
+          .from("set_logs")
+          .delete()
+          .eq("workout_log_id", workoutLogId);
+
+        // Delete the workout log
+        await supabase
+          .from("workout_logs")
+          .delete()
+          .eq("id", workoutLogId);
+      } catch (err) {
+        // Log error but continue with reset
+        console.warn("Failed to delete cancelled workout log:", err);
+      }
+    }
 
     // Reset state
     setWorkout(null);
     setWorkoutLogId(null);
     setProgramId(null);
+    setTemplateProgramId(null);
+    setPendingWorkoutId(null);
+    setIsWorkoutStarted(false);
     setCompletedSets(new Map());
     setElapsedSeconds(0);
+    setIsPaused(false);
+    setIsTimerRunning(false);
+    setRestSeconds(0);
+    setIsResting(false);
     startTimeRef.current = null;
+    pausedAtRef.current = 0;
+    totalPausedTimeRef.current = 0;
     setError(null);
-  }, []);
+  }, [supabase, workoutLogId, isWorkoutStarted]);
 
   return {
     workout,
@@ -351,11 +523,20 @@ export function useWorkoutSession(): UseWorkoutSessionReturn {
     isLoading,
     isSaving,
     error,
-    startSession,
+    isPaused,
+    restSeconds,
+    isResting,
+    isTimerRunning,
+    isWorkoutStarted,
+    loadWorkout,
+    beginWorkout,
     completeSet,
     uncompleteSet,
     finishWorkout,
     cancelWorkout,
+    togglePause,
+    startRestTimer,
+    stopRestTimer,
   };
 }
 

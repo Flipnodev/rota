@@ -5,11 +5,10 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
 import {
@@ -21,9 +20,9 @@ import {
   Play,
   Dumbbell,
   Check,
+  Lock,
 } from "@/components/icons";
 import { useProgram } from "@/hooks/use-program";
-import { useActiveProgram } from "@/hooks/use-active-program";
 import { useAuth } from "@/providers/auth-provider";
 
 // Helper to format difficulty level
@@ -55,25 +54,24 @@ export default function ProgramDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const { startProgram } = useActiveProgram();
-  const [isStarting, setIsStarting] = useState(false);
 
   const {
     program,
     completedWorkoutIds,
+    todayCompletedWorkoutIds,
     completedWorkouts,
     totalWorkouts,
     progress,
     currentWeek,
+    hasStartedProgram,
     isLoading,
     error,
-    refetch,
   } = useProgram(id || null);
 
   // Check if this is a template program vs user's own program
   const isTemplate = program?.is_template === true;
   const isOwnProgram = program?.user_id != null && program?.user_id === user?.id;
-  const showStartButton = isTemplate && !isOwnProgram;
+  const showStartProgramText = isTemplate && !isOwnProgram && !hasStartedProgram;
 
   // Get today's day of week (1-7, Monday-Sunday format)
   const today = new Date();
@@ -82,62 +80,60 @@ export default function ProgramDetailScreen() {
   // Get week 1 workouts for display
   const week1Workouts = program?.workouts?.filter((w) => w.week_number === 1) || [];
 
-  // Find today's workout
-  const todaysWorkout = week1Workouts.find((w) => w.day_of_week === todayDayOfWeek);
+  // Find today's workouts (can be multiple)
+  const todaysWorkouts = week1Workouts.filter((w) => w.day_of_week === todayDayOfWeek);
+  const allTodaysWorkoutsCompleted = todaysWorkouts.length > 0 &&
+    todaysWorkouts.every((w) => todayCompletedWorkoutIds.includes(w.id));
+  const nextIncompleteWorkout = todaysWorkouts.find((w) => !todayCompletedWorkoutIds.includes(w.id));
+  const hasWorkoutsToday = todaysWorkouts.length > 0;
 
-  // Handle starting the program (copies template if needed, sets as active)
-  const handleStartProgram = useCallback(async () => {
-    if (!program?.id) return;
+  // Track expanded workout detail cards
+  const [expandedWorkoutIds, setExpandedWorkoutIds] = useState<Set<string>>(new Set());
 
-    setIsStarting(true);
-    const result = await startProgram(program.id);
-    setIsStarting(false);
-
-    if (result.success && result.programId) {
-      // Navigate to the user's program
-      router.replace({
-        pathname: "/program/[id]",
-        params: { id: result.programId },
-      });
-    } else {
-      Alert.alert("Error", result.error || "Failed to start program. Please try again.");
-    }
-  }, [program?.id, startProgram, router]);
-
-  const handleStartWorkout = useCallback(
-    async (workoutId: string) => {
-      if (!program?.id) return;
-
-      // If this is a template program and user doesn't own it,
-      // start the program first (which copies it and sets as active)
-      if (isTemplate && !isOwnProgram) {
-        setIsStarting(true);
-        const result = await startProgram(program.id);
-        setIsStarting(false);
-
-        if (result.success && result.programId) {
-          router.replace({
-            pathname: "/program/[id]",
-            params: { id: result.programId },
-          });
-          Alert.alert(
-            "Program Started",
-            "This program is now your active program. You can start your workout."
-          );
-        } else {
-          Alert.alert("Error", result.error || "Failed to start program. Please try again.");
-        }
-        return;
+  const toggleWorkoutExpanded = useCallback((workoutId: string) => {
+    setExpandedWorkoutIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(workoutId)) {
+        next.delete(workoutId);
+      } else {
+        next.add(workoutId);
       }
+      return next;
+    });
+  }, []);
 
-      // For user's own programs, start the workout directly
+  // Handle tapping a workout in the schedule (only for workouts that can be started)
+  const handleWorkoutPress = useCallback(
+    (workoutId: string) => {
+      // Navigate to workout - pass templateProgramId if this is a template
       router.push({
         pathname: "/workout/active",
-        params: { workoutId, programId: id },
+        params: {
+          workoutId,
+          programId: id,
+          ...(isTemplate && !isOwnProgram ? { templateProgramId: program?.id } : {}),
+        },
       });
     },
-    [program?.id, isTemplate, isOwnProgram, startProgram, router, id]
+    [router, id, isTemplate, isOwnProgram, program?.id]
   );
+
+  // Handle "Start Program" / "Start Today's Workout" button
+  const handleStartTodaysWorkout = useCallback(() => {
+    if (!nextIncompleteWorkout) {
+      return;
+    }
+
+    // Navigate to workout - pass templateProgramId if this is a template
+    router.push({
+      pathname: "/workout/active",
+      params: {
+        workoutId: nextIncompleteWorkout.id,
+        programId: id,
+        ...(isTemplate && !isOwnProgram ? { templateProgramId: program?.id } : {}),
+      },
+    });
+  }, [nextIncompleteWorkout, router, id, isTemplate, isOwnProgram, program?.id]);
 
   if (isLoading) {
     return (
@@ -253,58 +249,71 @@ export default function ProgramDetailScreen() {
             week1Workouts.map((workout) => {
               const isToday = workout.day_of_week === todayDayOfWeek;
               const exerciseCount = workout.workout_exercises?.length || 0;
-              const isCompleted = completedWorkoutIds.includes(workout.id);
+              const isCompletedToday = todayCompletedWorkoutIds.includes(workout.id);
+              const canStart = isToday && !isCompletedToday;
 
               return (
                 <Pressable
                   key={workout.id}
                   style={[
                     styles.scheduleItem,
-                    isToday && styles.scheduleItemToday,
-                    isCompleted && styles.scheduleItemCompleted,
+                    canStart && styles.scheduleItemToday,
+                    isCompletedToday && styles.scheduleItemCompleted,
+                    !isToday && !isCompletedToday && styles.scheduleItemLocked,
                   ]}
-                  onPress={() => handleStartWorkout(workout.id)}
+                  onPress={canStart ? () => handleWorkoutPress(workout.id) : undefined}
+                  disabled={!canStart}
                 >
-                  {/* Completion indicator */}
-                  {isOwnProgram && (
-                    <View style={[
-                      styles.completionIndicator,
-                      isCompleted && styles.completionIndicatorDone,
-                    ]}>
-                      {isCompleted && <Check size={14} color={colors.black} />}
-                    </View>
-                  )}
+                  {/* Status indicator */}
+                  <View style={[
+                    styles.statusIndicator,
+                    isCompletedToday && styles.statusIndicatorDone,
+                    !isToday && !isCompletedToday && styles.statusIndicatorLocked,
+                    canStart && styles.statusIndicatorReady,
+                  ]}>
+                    {isCompletedToday ? (
+                      <Check size={14} color={colors.black} />
+                    ) : !isToday ? (
+                      <Lock size={12} color={colors.zinc600} />
+                    ) : null}
+                  </View>
                   <View style={styles.scheduleDay}>
                     <Text
                       style={[
                         styles.scheduleDayText,
-                        isToday && styles.scheduleDayTextToday,
-                        isCompleted && styles.scheduleDayTextCompleted,
+                        canStart && styles.scheduleDayTextToday,
+                        isCompletedToday && styles.scheduleDayTextCompleted,
                       ]}
                     >
                       {getDayName(workout.day_of_week)}
                     </Text>
-                    {isToday && !isCompleted && (
+                    {canStart && (
                       <View style={styles.todayBadge}>
                         <Text style={styles.todayBadgeText}>TODAY</Text>
                       </View>
                     )}
-                    {isCompleted && (
+                    {isCompletedToday && (
                       <View style={styles.completedBadge}>
-                        <Text style={styles.completedBadgeText}>DONE</Text>
+                        <Text style={styles.completedBadgeText}>COMPLETED</Text>
                       </View>
                     )}
                   </View>
                   <View style={styles.workoutInfo}>
                     <Text style={[
                       styles.scheduleWorkout,
-                      isCompleted && styles.scheduleWorkoutCompleted,
+                      !canStart && styles.scheduleWorkoutLocked,
                     ]}>{workout.name}</Text>
                     <Text style={styles.exerciseCount}>
                       {exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""}
                     </Text>
                   </View>
-                  <ChevronRight size={20} color={colors.zinc600} />
+                  {canStart ? (
+                    <Play size={20} color={colors.emerald500} />
+                  ) : isCompletedToday ? (
+                    <Check size={20} color={colors.emerald500} />
+                  ) : (
+                    <ChevronRight size={20} color={colors.zinc700} />
+                  )}
                 </Pressable>
               );
             })
@@ -317,70 +326,94 @@ export default function ProgramDetailScreen() {
           )}
         </View>
 
-        {/* Workout Details Expanded */}
+        {/* Workout Details - Collapsible */}
         {week1Workouts.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Workout Details</Text>
-            {week1Workouts.map((workout) => (
-              <View key={workout.id} style={styles.workoutDetailCard}>
-                <View style={styles.workoutDetailHeader}>
-                  <Dumbbell size={18} color={colors.emerald500} />
-                  <Text style={styles.workoutDetailName}>{workout.name}</Text>
-                </View>
-                {workout.workout_exercises &&
-                workout.workout_exercises.length > 0 ? (
-                  <View style={styles.exerciseList}>
-                    {workout.workout_exercises.map((we, index) => (
-                      <View key={we.id} style={styles.exerciseItem}>
-                        <Text style={styles.exerciseNumber}>{index + 1}</Text>
-                        <View style={styles.exerciseInfo}>
-                          <Text style={styles.exerciseName}>
-                            {we.exercise?.name || "Unknown Exercise"}
-                          </Text>
-                          <Text style={styles.exerciseSets}>
-                            {we.sets?.length || 0} sets
-                          </Text>
+            {week1Workouts.map((workout) => {
+              const isExpanded = expandedWorkoutIds.has(workout.id);
+              const exerciseCount = workout.workout_exercises?.length || 0;
+
+              return (
+                <View key={workout.id} style={styles.workoutDetailCard}>
+                  <Pressable
+                    style={styles.workoutDetailHeader}
+                    onPress={() => toggleWorkoutExpanded(workout.id)}
+                  >
+                    <Dumbbell size={18} color={colors.emerald500} />
+                    <View style={styles.workoutDetailHeaderInfo}>
+                      <Text style={styles.workoutDetailName}>{workout.name}</Text>
+                      <Text style={styles.workoutDetailMeta}>
+                        {exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""}
+                      </Text>
+                    </View>
+                    <View style={[
+                      styles.expandIcon,
+                      isExpanded && styles.expandIconRotated,
+                    ]}>
+                      <ChevronRight size={20} color={colors.zinc500} />
+                    </View>
+                  </Pressable>
+
+                  {isExpanded && (
+                    <>
+                      {workout.workout_exercises &&
+                      workout.workout_exercises.length > 0 ? (
+                        <View style={styles.exerciseList}>
+                          {workout.workout_exercises.map((we, index) => (
+                            <View key={we.id} style={styles.exerciseItem}>
+                              <Text style={styles.exerciseNumber}>{index + 1}</Text>
+                              <View style={styles.exerciseInfo}>
+                                <Text style={styles.exerciseName}>
+                                  {we.exercise?.name || "Unknown Exercise"}
+                                </Text>
+                                <Text style={styles.exerciseSets}>
+                                  {we.sets?.length || 0} sets
+                                </Text>
+                              </View>
+                            </View>
+                          ))}
                         </View>
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={styles.noExercisesText}>
-                    No exercises defined
-                  </Text>
-                )}
-              </View>
-            ))}
+                      ) : (
+                        <Text style={styles.noExercisesText}>
+                          No exercises defined
+                        </Text>
+                      )}
+                    </>
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
 
         {/* Start Button */}
-        {showStartButton ? (
-          // Template program - show "Start This Program"
+        {nextIncompleteWorkout ? (
+          // There's a workout today that's not completed
           <Pressable
-            style={[styles.startButton, isStarting && styles.startButtonDisabled]}
-            onPress={handleStartProgram}
-            disabled={isStarting}
+            style={styles.startButton}
+            onPress={handleStartTodaysWorkout}
           >
             <Play size={20} color={colors.black} />
             <Text style={styles.startButtonText}>
-              {isStarting ? "Starting Program..." : "Start This Program"}
+              {showStartProgramText ? "Start Program" : "Start Today's Workout"}
             </Text>
           </Pressable>
-        ) : isOwnProgram && todaysWorkout ? (
-          // User's own program - show today's workout button
-          <Pressable
-            style={styles.startButton}
-            onPress={() => handleStartWorkout(todaysWorkout.id)}
-          >
-            <Play size={20} color={colors.black} />
-            <Text style={styles.startButtonText}>Start Today's Workout</Text>
-          </Pressable>
-        ) : isOwnProgram && week1Workouts.length > 0 ? (
-          // User's own program but no workout scheduled for today
+        ) : allTodaysWorkoutsCompleted ? (
+          // All of today's workouts are done
+          <View style={styles.completedMessage}>
+            <Check size={20} color={colors.emerald500} />
+            <Text style={styles.completedMessageText}>
+              {todaysWorkouts.length > 1
+                ? "All workouts complete! Rest up for tomorrow."
+                : "Today's workout complete! Rest up for tomorrow."}
+            </Text>
+          </View>
+        ) : week1Workouts.length > 0 && !hasWorkoutsToday ? (
+          // No workout scheduled for today
           <View style={styles.noTodayWorkout}>
             <Text style={styles.noTodayWorkoutText}>
-              No workout scheduled for today. Tap any workout above to start.
+              No workout scheduled for today. Check back on your next workout day!
             </Text>
           </View>
         ) : null}
@@ -565,11 +598,17 @@ const styles = StyleSheet.create({
   },
   scheduleItemToday: {
     borderColor: colors.emerald500,
+    backgroundColor: colors.emeraldAlpha10,
   },
   scheduleItemCompleted: {
     opacity: 0.7,
+    borderColor: colors.emerald500,
+    backgroundColor: colors.zinc900,
   },
-  completionIndicator: {
+  scheduleItemLocked: {
+    opacity: 0.5,
+  },
+  statusIndicator: {
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -579,9 +618,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  completionIndicatorDone: {
+  statusIndicatorDone: {
     backgroundColor: colors.emerald500,
     borderColor: colors.emerald500,
+  },
+  statusIndicatorLocked: {
+    backgroundColor: colors.zinc800,
+    borderColor: colors.zinc700,
+  },
+  statusIndicatorReady: {
+    borderColor: colors.emerald500,
+    backgroundColor: colors.emeraldAlpha20,
   },
   scheduleDay: {
     width: 100,
@@ -630,8 +677,8 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.white,
   },
-  scheduleWorkoutCompleted: {
-    color: colors.zinc400,
+  scheduleWorkoutLocked: {
+    color: colors.zinc500,
   },
   exerciseCount: {
     fontSize: fontSize.xs,
@@ -653,27 +700,43 @@ const styles = StyleSheet.create({
   workoutDetailCard: {
     backgroundColor: colors.zinc900,
     borderRadius: radius.lg,
-    padding: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.zinc800,
+    overflow: "hidden",
   },
   workoutDetailHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    marginBottom: spacing.sm,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.zinc800,
+    padding: spacing.md,
+  },
+  workoutDetailHeaderInfo: {
+    flex: 1,
   },
   workoutDetailName: {
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
     color: colors.white,
   },
+  workoutDetailMeta: {
+    fontSize: fontSize.xs,
+    color: colors.zinc500,
+    marginTop: 2,
+  },
+  expandIcon: {
+    transform: [{ rotate: "0deg" }],
+  },
+  expandIconRotated: {
+    transform: [{ rotate: "90deg" }],
+  },
   exerciseList: {
     gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.zinc800,
+    paddingTop: spacing.sm,
   },
   exerciseItem: {
     flexDirection: "row",
@@ -707,6 +770,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.zinc500,
     fontStyle: "italic",
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.zinc800,
+    paddingTop: spacing.sm,
   },
   startButton: {
     flexDirection: "row",
@@ -718,13 +786,28 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.xl,
   },
-  startButtonDisabled: {
-    opacity: 0.6,
-  },
   startButtonText: {
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
     color: colors.black,
+  },
+  completedMessage: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.emeraldAlpha10,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.lg,
+    gap: spacing.sm,
+    marginTop: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.emerald500,
+  },
+  completedMessageText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    color: colors.emerald500,
   },
   noTodayWorkout: {
     backgroundColor: colors.zinc900,

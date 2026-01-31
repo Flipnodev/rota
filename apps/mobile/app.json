@@ -9,9 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rota.app"
     },
     "android": {
+      "package": "com.rota.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -23,7 +25,15 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "bundler": "metro",
+      "name": "Rota",
+      "shortName": "Rota",
+      "themeColor": "#000000",
+      "backgroundColor": "#000000",
+      "display": "standalone",
+      "startUrl": "/",
+      "orientation": "portrait"
     },
     "plugins": [
       "expo-router",

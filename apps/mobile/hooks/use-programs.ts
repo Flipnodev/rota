@@ -36,6 +36,7 @@ export function usePrograms(): UseProgramsReturn {
   const { user } = useAuth();
   const { isPremium, isLoading: subscriptionLoading } = useSubscription();
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [activeProgram, setActiveProgram] = useState<Program | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -60,9 +61,21 @@ export function usePrograms(): UseProgramsReturn {
         .eq("is_template", true)
         .order("created_at", { ascending: false });
 
-      const [userResult, templateResult] = await Promise.all([
+      // Fetch user's active program from user_programs table
+      const activeProgramPromise = user?.id
+        ? supabase
+            .from("user_programs")
+            .select("program:programs(*)")
+            .eq("user_id", user.id)
+            .order("started_at", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null });
+
+      const [userResult, templateResult, activeResult] = await Promise.all([
         userProgramsPromise,
         templateProgramsPromise,
+        activeProgramPromise,
       ]);
 
       if (userResult.error) {
@@ -70,6 +83,9 @@ export function usePrograms(): UseProgramsReturn {
       }
       if (templateResult.error) {
         throw new Error(templateResult.error.message);
+      }
+      if (activeResult.error) {
+        throw new Error(activeResult.error.message);
       }
 
       // Combine and deduplicate programs
@@ -83,6 +99,13 @@ export function usePrograms(): UseProgramsReturn {
       }
 
       setPrograms(allPrograms);
+
+      // Set active program from user_programs join
+      if (activeResult.data?.program) {
+        setActiveProgram(activeResult.data.program as Program);
+      } else {
+        setActiveProgram(null);
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err : new Error("Failed to fetch programs")
@@ -95,12 +118,6 @@ export function usePrograms(): UseProgramsReturn {
   useEffect(() => {
     fetchPrograms();
   }, [fetchPrograms]);
-
-  // Find active program (user's program that is not a template)
-  const userPrograms = programs.filter(
-    (p) => p.user_id === user?.id && !p.is_template
-  );
-  const activeProgram = userPrograms.length > 0 ? userPrograms[0] : null;
 
   // Template programs for the library
   const templatePrograms = programs.filter((p) => p.is_template);

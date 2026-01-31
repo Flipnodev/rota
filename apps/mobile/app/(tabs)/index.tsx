@@ -10,7 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
-import { Play, TrendingUp, Calendar, ChevronRight, Dumbbell } from "@/components/icons";
+import { TrendingUp, Calendar, ChevronRight, Dumbbell, Check } from "@/components/icons";
 import { useProfile } from "@/hooks/use-profile";
 import { useActiveProgram } from "@/hooks/use-active-program";
 import { useWorkoutLogs } from "@/hooks/use-workout-logs";
@@ -22,31 +22,13 @@ function getGreeting(): string {
   return "Good evening";
 }
 
-function formatDuration(seconds: number | null): string {
-  if (!seconds) return "0 min";
-  const minutes = Math.round(seconds / 60);
-  return `${minutes} min`;
-}
-
-function formatRelativeDate(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
-
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
 export default function HomeScreen() {
   const router = useRouter();
   const { profile, isLoading: profileLoading } = useProfile();
   const {
     activeProgram,
     todaysWorkout,
+    isTodaysWorkoutCompleted,
     currentWeek,
     totalWeeks,
     progress,
@@ -54,30 +36,11 @@ export default function HomeScreen() {
     totalWorkouts,
     isLoading: programLoading,
   } = useActiveProgram();
-  const {
-    workoutLogs,
-    stats,
-    isLoading: logsLoading,
-  } = useWorkoutLogs({ limit: 3 });
+  const { stats, isLoading: statsLoading } = useWorkoutLogs();
 
-  const isLoading = profileLoading || programLoading || logsLoading;
+  const isLoading = profileLoading || programLoading || statsLoading;
 
   const displayName = profile?.display_name || profile?.email?.split("@")[0] || "there";
-
-  const handleStartTodaysWorkout = () => {
-    if (todaysWorkout && activeProgram) {
-      router.push({
-        pathname: "/workout/active",
-        params: {
-          workoutId: todaysWorkout.id,
-          programId: activeProgram.program.id,
-        },
-      });
-    } else if (activeProgram) {
-      // No workout for today, go to program details
-      router.push(`/program/${activeProgram.program.id}`);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -121,15 +84,21 @@ export default function HomeScreen() {
               <Text style={styles.progressText}>{progress}% complete</Text>
             </View>
 
-            <Pressable
-              style={styles.startButton}
-              onPress={handleStartTodaysWorkout}
-            >
-              <Play size={20} color={colors.black} />
-              <Text style={styles.startButtonText}>
-                {todaysWorkout ? "Start Today's Workout" : "View Program"}
-              </Text>
-            </Pressable>
+            {isTodaysWorkoutCompleted ? (
+              <View style={styles.completedButton}>
+                <Check size={20} color={colors.emerald500} />
+                <Text style={styles.completedButtonText}>
+                  Today's Workout Complete!
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.viewProgramButton}>
+                <Text style={styles.viewProgramButtonText}>
+                  {todaysWorkout ? "View Today's Workout" : "View Program"}
+                </Text>
+                <ChevronRight size={18} color={colors.emerald500} />
+              </View>
+            )}
           </Pressable>
         ) : (
           <View style={styles.emptyProgramCard}>
@@ -163,42 +132,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Recent Activity */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <Pressable onPress={() => router.push("/(tabs)/history")}>
-              <Text style={styles.sectionLink}>See all</Text>
-            </Pressable>
-          </View>
-
-          {workoutLogs.length > 0 ? (
-            workoutLogs.map((log) => (
-              <Pressable key={log.id} style={styles.activityItem}>
-                <View style={styles.activityIcon}>
-                  <Play size={16} color={colors.emerald500} />
-                </View>
-                <View style={styles.activityContent}>
-                  <Text style={styles.activityName}>
-                    {log.workout?.name || "Workout"}
-                  </Text>
-                  <Text style={styles.activityMeta}>
-                    {formatRelativeDate(log.started_at)} ·{" "}
-                    {formatDuration(log.duration_seconds)}
-                  </Text>
-                </View>
-                <ChevronRight size={20} color={colors.zinc600} />
-              </Pressable>
-            ))
-          ) : (
-            <View style={styles.emptyActivity}>
-              <Text style={styles.emptyActivityText}>
-                No workout history yet. Start your first workout to see your
-                progress here!
-              </Text>
-            </View>
-          )}
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -282,19 +215,35 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.zinc500,
   },
-  startButton: {
+  viewProgramButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.emerald500,
+    backgroundColor: colors.zinc800,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    gap: spacing.xs,
+  },
+  viewProgramButtonText: {
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.medium,
+    color: colors.emerald500,
+  },
+  completedButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.emeraldAlpha10,
     paddingVertical: spacing.md,
     borderRadius: radius.lg,
     gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.emerald500,
   },
-  startButtonText: {
+  completedButtonText: {
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
-    color: colors.black,
+    color: colors.emerald500,
   },
   emptyProgramCard: {
     backgroundColor: colors.zinc900,
@@ -360,68 +309,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.zinc500,
     marginTop: spacing.xs,
-  },
-  section: {
-    marginTop: spacing.xl,
-    marginBottom: spacing.xl,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.white,
-  },
-  sectionLink: {
-    fontSize: fontSize.sm,
-    color: colors.emerald500,
-  },
-  activityItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.zinc900,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-  },
-  activityIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.emeraldAlpha10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: spacing.md,
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityName: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.medium,
-    color: colors.white,
-    marginBottom: 2,
-  },
-  activityMeta: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
-  },
-  emptyActivity: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-  },
-  emptyActivityText: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
-    textAlign: "center",
   },
 });

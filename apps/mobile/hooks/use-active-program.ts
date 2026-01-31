@@ -37,7 +37,11 @@ interface ActiveProgramData {
 interface UseActiveProgramReturn {
   activeProgram: ActiveProgramData | null;
   workouts: WorkoutWithExercises[];
-  todaysWorkout: WorkoutWithExercises | null;
+  todaysWorkouts: WorkoutWithExercises[];
+  todaysWorkout: WorkoutWithExercises | null; // backwards compat, first of today's workouts
+  completedWorkoutIds: string[];
+  isTodaysWorkoutCompleted: boolean; // backwards compat, true if ALL today's workouts completed
+  allTodaysWorkoutsCompleted: boolean;
   currentWeek: number;
   totalWeeks: number;
   progress: number;
@@ -54,6 +58,7 @@ export function useActiveProgram(): UseActiveProgramReturn {
   const { user } = useAuth();
   const [activeProgram, setActiveProgram] = useState<ActiveProgramData | null>(null);
   const [workouts, setWorkouts] = useState<WorkoutWithExercises[]>([]);
+  const [completedWorkoutIds, setCompletedWorkoutIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -112,9 +117,26 @@ export function useActiveProgram(): UseActiveProgramReturn {
         });
 
         setWorkouts(sortedWorkouts);
+
+        // Fetch today's completed workout logs for this program
+        const today = new Date();
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
+
+        const { data: logsData } = await supabase
+          .from("workout_logs")
+          .select("workout_id")
+          .eq("user_id", user.id)
+          .eq("program_id", data.program.id)
+          .not("completed_at", "is", null)
+          .gte("started_at", startOfDay)
+          .lt("started_at", endOfDay);
+
+        setCompletedWorkoutIds((logsData || []).map((log: { workout_id: string }) => log.workout_id));
       } else {
         setActiveProgram(null);
         setWorkouts([]);
+        setCompletedWorkoutIds([]);
       }
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Failed to fetch active program"));
@@ -170,15 +192,26 @@ export function useActiveProgram(): UseActiveProgramReturn {
     : 1;
   const totalWeeks = activeProgram?.program.duration_weeks || 0;
 
-  // Find today's workout
+  // Find today's workouts (can be multiple)
   const today = new Date();
   const dayOfWeek = today.getDay() || 7; // Convert Sunday from 0 to 7
-  const todaysWorkout = workouts.find((w) => w.day_of_week === dayOfWeek) || null;
+  const todaysWorkouts = workouts.filter((w) => w.day_of_week === dayOfWeek);
+  // For backwards compatibility, also provide single workout
+  const todaysWorkout = todaysWorkouts.length > 0 ? todaysWorkouts[0] : null;
+  // Check if ALL today's workouts are completed
+  const allTodaysWorkoutsCompleted = todaysWorkouts.length > 0 &&
+    todaysWorkouts.every((w) => completedWorkoutIds.includes(w.id));
+  // For backwards compatibility
+  const isTodaysWorkoutCompleted = allTodaysWorkoutsCompleted;
 
   return {
     activeProgram,
     workouts,
-    todaysWorkout,
+    todaysWorkouts,
+    todaysWorkout, // backwards compat
+    completedWorkoutIds,
+    isTodaysWorkoutCompleted,
+    allTodaysWorkoutsCompleted,
     currentWeek,
     totalWeeks,
     progress,

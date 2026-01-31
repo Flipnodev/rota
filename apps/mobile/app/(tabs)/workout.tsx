@@ -10,8 +10,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
-import { Play, Clock, Dumbbell, ChevronRight, Calendar } from "@/components/icons";
+import { Play, Clock, Dumbbell, ChevronRight, Calendar, Check } from "@/components/icons";
 import { useActiveProgram } from "@/hooks/use-active-program";
+
+// Helper to get day name from day_of_week (1 = Monday, 7 = Sunday)
+function getDayName(dayOfWeek: number): string {
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  return days[dayOfWeek % 7] || `Day ${dayOfWeek}`;
+}
 
 function estimateDuration(exerciseCount: number): string {
   // Rough estimate: ~8 min per exercise
@@ -22,7 +28,43 @@ function estimateDuration(exerciseCount: number): string {
 
 export default function WorkoutScreen() {
   const router = useRouter();
-  const { activeProgram, todaysWorkout, isLoading, error } = useActiveProgram();
+  const {
+    activeProgram,
+    todaysWorkouts,
+    workouts,
+    completedWorkoutIds,
+    allTodaysWorkoutsCompleted,
+    isLoading,
+  } = useActiveProgram();
+
+  // Find the next workout (next scheduled day after today)
+  const getNextWorkout = () => {
+    if (!workouts || workouts.length === 0) return null;
+
+    const today = new Date();
+    const todayDayOfWeek = today.getDay() || 7; // 1-7, Mon-Sun
+
+    // Sort workouts by day and find the next one after today
+    const sortedWorkouts = [...workouts].sort((a, b) => a.day_of_week - b.day_of_week);
+
+    // First try to find a workout later this week
+    const nextThisWeek = sortedWorkouts.find(w => w.day_of_week > todayDayOfWeek);
+    if (nextThisWeek) {
+      return { name: nextThisWeek.name, dayName: getDayName(nextThisWeek.day_of_week) };
+    }
+
+    // Otherwise, wrap around to next week
+    if (sortedWorkouts.length > 0) {
+      return { name: sortedWorkouts[0].name, dayName: getDayName(sortedWorkouts[0].day_of_week) };
+    }
+
+    return null;
+  };
+
+  const nextWorkout = getNextWorkout();
+
+  // Check if a specific workout is completed
+  const isWorkoutCompleted = (workoutId: string) => completedWorkoutIds.includes(workoutId);
 
   if (isLoading) {
     return (
@@ -81,12 +123,12 @@ export default function WorkoutScreen() {
   }
 
   // Active program but no workout scheduled for today
-  if (!todaysWorkout) {
+  if (todaysWorkouts.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <Text style={styles.title}>Today's Workout</Text>
+            <Text style={styles.title}>Rest Day</Text>
             <Text style={styles.subtitle}>{activeProgram.name}</Text>
           </View>
 
@@ -120,95 +162,147 @@ export default function WorkoutScreen() {
     );
   }
 
-  // Get exercises from today's workout
-  const exercises = todaysWorkout.workout_exercises || [];
+  // All of today's workouts are completed
+  if (allTodaysWorkoutsCompleted) {
+    const completedCount = todaysWorkouts.length;
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <Text style={styles.title}>
+              {completedCount > 1 ? "All Done!" : "Workout Complete!"}
+            </Text>
+            <Text style={styles.subtitle}>{activeProgram.name}</Text>
+          </View>
 
+          <View style={styles.completedCard}>
+            <View style={styles.completedIconContainer}>
+              <Check size={40} color={colors.emerald500} />
+            </View>
+            <Text style={styles.completedTitle}>
+              {completedCount > 1 ? "All Workouts Complete!" : "Workout Complete!"}
+            </Text>
+            <Text style={styles.completedWorkoutName}>
+              {todaysWorkouts.map(w => w.name).join(", ")}
+            </Text>
+            <Text style={styles.completedText}>
+              Great work! You crushed it today. Rest up and recover.
+            </Text>
+
+            {nextWorkout && (
+              <View style={styles.nextWorkoutContainer}>
+                <Text style={styles.nextWorkoutLabel}>Next Workout</Text>
+                <View style={styles.nextWorkoutInfo}>
+                  <Calendar size={16} color={colors.zinc400} />
+                  <Text style={styles.nextWorkoutText}>
+                    {nextWorkout.dayName}: {nextWorkout.name}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            <View style={styles.motivationalBadge}>
+              <Check size={16} color={colors.emerald500} />
+              <Text style={styles.motivationalText}>Keep up the good work!</Text>
+            </View>
+          </View>
+
+          {/* Quick Actions */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+
+            <View style={styles.actionsRow}>
+              <Pressable style={styles.actionCard}>
+                <Dumbbell size={24} color={colors.zinc400} />
+                <Text style={styles.actionText}>Empty Workout</Text>
+              </Pressable>
+              <Pressable style={styles.actionCard}>
+                <Clock size={24} color={colors.zinc400} />
+                <Text style={styles.actionText}>View History</Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // Show today's workouts (one or more)
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Today's Workout</Text>
+          <Text style={styles.title}>
+            {todaysWorkouts.length > 1 ? "Today's Workouts" : "Today's Workout"}
+          </Text>
           <Text style={styles.subtitle}>{activeProgram.name}</Text>
         </View>
 
-        {/* Workout Card */}
-        <View style={styles.workoutCard}>
-          <Text style={styles.workoutName}>{todaysWorkout.name}</Text>
+        {/* Workout Cards */}
+        {todaysWorkouts.map((workout) => {
+          const exercises = workout.workout_exercises || [];
+          const completed = isWorkoutCompleted(workout.id);
 
-          <View style={styles.workoutMeta}>
-            <View style={styles.metaItem}>
-              <Clock size={16} color={colors.zinc400} />
-              <Text style={styles.metaText}>
-                {estimateDuration(exercises.length)}
-              </Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Dumbbell size={16} color={colors.zinc400} />
-              <Text style={styles.metaText}>{exercises.length} exercises</Text>
-            </View>
-          </View>
+          return (
+            <View
+              key={workout.id}
+              style={[
+                styles.workoutCard,
+                completed && styles.workoutCardCompleted,
+              ]}
+            >
+              <View style={styles.workoutHeader}>
+                <Text style={[styles.workoutName, completed && styles.workoutNameCompleted]}>
+                  {workout.name}
+                </Text>
+                {completed && (
+                  <View style={styles.completedBadge}>
+                    <Check size={12} color={colors.black} />
+                    <Text style={styles.completedBadgeText}>DONE</Text>
+                  </View>
+                )}
+              </View>
 
-          {/* Start Button */}
-          <Pressable
-            style={styles.startButton}
-            onPress={() =>
-              router.push({
-                pathname: "/workout/active",
-                params: {
-                  workoutId: todaysWorkout.id,
-                  programId: activeProgram.id,
-                },
-              })
-            }
-          >
-            <Play size={24} color={colors.black} />
-            <Text style={styles.startButtonText}>Start Workout</Text>
-          </Pressable>
-        </View>
+              <View style={styles.workoutMeta}>
+                <View style={styles.metaItem}>
+                  <Clock size={16} color={colors.zinc400} />
+                  <Text style={styles.metaText}>
+                    {estimateDuration(exercises.length)}
+                  </Text>
+                </View>
+                <View style={styles.metaItem}>
+                  <Dumbbell size={16} color={colors.zinc400} />
+                  <Text style={styles.metaText}>{exercises.length} exercises</Text>
+                </View>
+              </View>
 
-        {/* Exercise List */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Exercises</Text>
-
-          {exercises.length > 0 ? (
-            exercises.map((workoutExercise, index) => {
-              const exercise = workoutExercise.exercise;
-              const sets = workoutExercise.sets || [];
-              const setCount = sets.length;
-              const targetReps = sets.length > 0 ? sets[0].target_reps : 0;
-
-              return (
+              {/* Start Button or Completed Message */}
+              {completed ? (
+                <View style={styles.completedWorkoutButton}>
+                  <Check size={20} color={colors.emerald500} />
+                  <Text style={styles.completedWorkoutButtonText}>Completed</Text>
+                </View>
+              ) : (
                 <Pressable
-                  key={workoutExercise.id}
-                  style={styles.exerciseCard}
+                  style={styles.startButton}
                   onPress={() =>
-                    router.push(`/exercise/${workoutExercise.exercise_id}`)
+                    router.push({
+                      pathname: "/workout/active",
+                      params: {
+                        workoutId: workout.id,
+                        programId: activeProgram.program.id,
+                      },
+                    })
                   }
                 >
-                  <View style={styles.exerciseNumber}>
-                    <Text style={styles.exerciseNumberText}>{index + 1}</Text>
-                  </View>
-                  <View style={styles.exerciseContent}>
-                    <Text style={styles.exerciseName}>
-                      {exercise?.name || "Unknown Exercise"}
-                    </Text>
-                    <Text style={styles.exerciseMeta}>
-                      {setCount} sets x {targetReps} reps
-                    </Text>
-                  </View>
-                  <ChevronRight size={20} color={colors.zinc600} />
+                  <Play size={24} color={colors.black} />
+                  <Text style={styles.startButtonText}>Start Workout</Text>
                 </Pressable>
-              );
-            })
-          ) : (
-            <View style={styles.emptyExercises}>
-              <Text style={styles.emptyExercisesText}>
-                No exercises added to this workout yet
-              </Text>
+              )}
             </View>
-          )}
-        </View>
+          );
+        })}
 
         {/* Quick Actions */}
         <View style={styles.section}>
@@ -264,12 +358,56 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.zinc800,
+    marginBottom: spacing.md,
+  },
+  workoutCardCompleted: {
+    opacity: 0.7,
+    borderColor: colors.emerald500,
+  },
+  workoutHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.md,
   },
   workoutName: {
-    fontSize: fontSize["2xl"],
+    fontSize: fontSize["xl"],
     fontWeight: fontWeight.bold,
     color: colors.white,
-    marginBottom: spacing.md,
+    flex: 1,
+  },
+  workoutNameCompleted: {
+    color: colors.zinc400,
+  },
+  completedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.emerald500,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    gap: 4,
+  },
+  completedBadgeText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.black,
+  },
+  completedWorkoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.emeraldAlpha10,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.emerald500,
+  },
+  completedWorkoutButtonText: {
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.medium,
+    color: colors.emerald500,
   },
   workoutMeta: {
     flexDirection: "row",
@@ -366,6 +504,78 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.zinc500,
     textAlign: "center",
+  },
+  completedCard: {
+    backgroundColor: colors.zinc900,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.emerald500,
+    alignItems: "center",
+  },
+  completedIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.emeraldAlpha10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
+  completedTitle: {
+    fontSize: fontSize["2xl"],
+    fontWeight: fontWeight.bold,
+    color: colors.white,
+    marginBottom: spacing.xs,
+  },
+  completedWorkoutName: {
+    fontSize: fontSize.base,
+    color: colors.emerald500,
+    marginBottom: spacing.md,
+  },
+  completedText: {
+    fontSize: fontSize.sm,
+    color: colors.zinc400,
+    textAlign: "center",
+    marginBottom: spacing.lg,
+  },
+  nextWorkoutContainer: {
+    backgroundColor: colors.zinc800,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    width: "100%",
+    marginBottom: spacing.md,
+  },
+  nextWorkoutLabel: {
+    fontSize: fontSize.xs,
+    color: colors.zinc500,
+    marginBottom: spacing.xs,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  nextWorkoutInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  nextWorkoutText: {
+    fontSize: fontSize.base,
+    color: colors.white,
+    fontWeight: fontWeight.medium,
+  },
+  motivationalBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: colors.emeraldAlpha10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+  },
+  motivationalText: {
+    fontSize: fontSize.sm,
+    color: colors.emerald500,
+    fontWeight: fontWeight.medium,
   },
   section: {
     marginTop: spacing.xl,

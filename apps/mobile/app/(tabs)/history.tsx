@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   View,
   Text,
@@ -7,14 +8,19 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
-import { Calendar, ChevronRight, Check, Dumbbell } from "@/components/icons";
+import { ChevronRight, Check, Dumbbell } from "@/components/icons";
 import { useWorkoutLogs } from "@/hooks/use-workout-logs";
 
 function formatDuration(seconds: number | null): string {
   if (!seconds) return "0 min";
-  const minutes = Math.round(seconds / 60);
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.round((seconds % 3600) / 60);
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
   return `${minutes} min`;
 }
 
@@ -31,8 +37,118 @@ function formatDate(dateString: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// Weekly bar chart component with blobs
+function WeeklyChart({ workoutCounts }: { workoutCounts: { day: string; count: number; isToday: boolean }[] }) {
+  const maxCount = Math.max(...workoutCounts.map((d) => d.count), 1);
+  const containerHeight = 100;
+  const padding = 8; // total vertical padding
+  const gap = 3;
+  const availableHeight = containerHeight - padding;
+
+  // Calculate blob height: (available - gaps) / maxCount
+  const totalGaps = maxCount > 1 ? (maxCount - 1) * gap : 0;
+  const blobHeight = (availableHeight - totalGaps) / maxCount;
+
+  return (
+    <View style={styles.chartCard}>
+      <Text style={styles.chartTitle}>This Week</Text>
+      <View style={styles.chartContainer}>
+        {workoutCounts.map((day, index) => (
+          <View key={index} style={styles.chartBar}>
+            <View style={styles.barContainer}>
+              {/* Render blobs from bottom to top */}
+              {Array.from({ length: day.count }).map((_, blobIndex) => (
+                <View
+                  key={blobIndex}
+                  style={[
+                    styles.blob,
+                    {
+                      height: blobHeight,
+                      marginTop: blobIndex > 0 ? gap : 0,
+                    },
+                    day.isToday && styles.blobToday,
+                  ]}
+                />
+              ))}
+            </View>
+            <Text style={[styles.barLabel, day.isToday && styles.barLabelToday]}>
+              {day.day}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// Workout card that navigates to detail page
+function WorkoutCard({
+  log,
+  onPress,
+}: {
+  log: any;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={styles.workoutCard} onPress={onPress}>
+      <View style={styles.workoutCardHeader}>
+        <View style={styles.workoutIcon}>
+          <Check size={16} color={colors.emerald500} />
+        </View>
+        <View style={styles.workoutContent}>
+          <Text style={styles.workoutName}>
+            {log.workout?.name || "Workout"}
+          </Text>
+          <Text style={styles.workoutMeta}>
+            {formatDate(log.started_at)} · {formatDuration(log.duration_seconds)}
+          </Text>
+        </View>
+        <ChevronRight size={20} color={colors.zinc600} />
+      </View>
+    </Pressable>
+  );
+}
+
 export default function HistoryScreen() {
-  const { workoutLogs, stats, isLoading, error } = useWorkoutLogs();
+  const router = useRouter();
+  const { workoutLogs, stats, isLoading } = useWorkoutLogs();
+
+  // Calculate workout counts for the past 7 days
+  const weeklyData = useMemo(() => {
+    const days = ["M", "T", "W", "T", "F", "S", "S"];
+    const today = new Date();
+    const todayDayOfWeek = today.getDay(); // 0 = Sunday
+
+    // Get start of this week (Monday)
+    const startOfWeek = new Date(today);
+    const diff = todayDayOfWeek === 0 ? 6 : todayDayOfWeek - 1;
+    startOfWeek.setDate(today.getDate() - diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const result = days.map((day, index) => {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + index);
+
+      const count = workoutLogs.filter((log) => {
+        if (!log.completed_at) return false;
+        const logDate = new Date(log.started_at);
+        return (
+          logDate.getDate() === date.getDate() &&
+          logDate.getMonth() === date.getMonth() &&
+          logDate.getFullYear() === date.getFullYear()
+        );
+      }).length;
+
+      const isToday =
+        date.getDate() === today.getDate() &&
+        date.getMonth() === today.getMonth() &&
+        date.getFullYear() === today.getFullYear();
+
+      return { day, count, isToday };
+    });
+
+    return result;
+  }, [workoutLogs]);
 
   if (isLoading) {
     return (
@@ -69,46 +185,25 @@ export default function HistoryScreen() {
           </View>
         </View>
 
-        {/* Calendar Placeholder */}
-        <View style={styles.calendarCard}>
-          <View style={styles.calendarHeader}>
-            <Calendar size={20} color={colors.emerald500} />
-            <Text style={styles.calendarTitle}>
-              {new Date().toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              })}
-            </Text>
-          </View>
-          <View style={styles.calendarPlaceholder}>
-            <Text style={styles.placeholderText}>Calendar view coming soon</Text>
-          </View>
-        </View>
+        {/* Weekly Chart */}
+        <WeeklyChart workoutCounts={weeklyData} />
 
         {/* Workout History */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Workouts</Text>
+          <Text style={styles.sectionTitle}>
+            Recent Workouts ({stats.totalWorkouts})
+          </Text>
 
-          {workoutLogs.length > 0 ? (
-            workoutLogs.map((log) => (
-              <Pressable key={log.id} style={styles.workoutCard}>
-                <View style={styles.workoutIcon}>
-                  <Check size={16} color={colors.emerald500} />
-                </View>
-                <View style={styles.workoutContent}>
-                  <View style={styles.workoutHeader}>
-                    <Text style={styles.workoutName}>
-                      {log.workout?.name || "Workout"}
-                    </Text>
-                  </View>
-                  <Text style={styles.workoutMeta}>
-                    {formatDate(log.started_at)} ·{" "}
-                    {formatDuration(log.duration_seconds)}
-                  </Text>
-                </View>
-                <ChevronRight size={20} color={colors.zinc600} />
-              </Pressable>
-            ))
+          {workoutLogs.filter((log) => log.completed_at !== null).length > 0 ? (
+            workoutLogs
+              .filter((log) => log.completed_at !== null)
+              .map((log) => (
+                <WorkoutCard
+                  key={log.id}
+                  log={log}
+                  onPress={() => router.push(`/history/${log.id}`)}
+                />
+              ))
           ) : (
             <View style={styles.emptyHistory}>
               <View style={styles.emptyIconContainer}>
@@ -178,36 +273,59 @@ const styles = StyleSheet.create({
     color: colors.zinc500,
     marginTop: 2,
   },
-  calendarCard: {
+  // Chart styles
+  chartCard: {
     backgroundColor: colors.zinc900,
     borderRadius: radius.xl,
-    padding: spacing.md,
+    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.zinc800,
     marginBottom: spacing.lg,
   },
-  calendarHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  calendarTitle: {
+  chartTitle: {
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
     color: colors.white,
+    marginBottom: spacing.lg,
   },
-  calendarPlaceholder: {
-    height: 200,
-    backgroundColor: colors.zinc800,
-    borderRadius: radius.lg,
+  chartContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    height: 120,
+  },
+  chartBar: {
+    flex: 1,
     alignItems: "center",
-    justifyContent: "center",
   },
-  placeholderText: {
-    fontSize: fontSize.sm,
+  barContainer: {
+    width: 28,
+    height: 100,
+    backgroundColor: colors.zinc800,
+    borderRadius: radius.md,
+    justifyContent: "flex-end",
+    alignItems: "center",
+    overflow: "hidden",
+    padding: 4,
+  },
+  blob: {
+    width: "100%",
+    backgroundColor: colors.emerald500,
+    borderRadius: 4,
+  },
+  blobToday: {
+    backgroundColor: colors.emerald400,
+  },
+  barLabel: {
+    fontSize: fontSize.xs,
     color: colors.zinc500,
+    marginTop: spacing.sm,
   },
+  barLabelToday: {
+    color: colors.emerald500,
+    fontWeight: fontWeight.semibold,
+  },
+  // Section styles
   section: {
     marginBottom: spacing.xl,
   },
@@ -217,15 +335,18 @@ const styles = StyleSheet.create({
     color: colors.white,
     marginBottom: spacing.md,
   },
+  // Workout card styles
   workoutCard: {
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: colors.zinc900,
-    padding: spacing.md,
     borderRadius: radius.lg,
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.zinc800,
+  },
+  workoutCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: spacing.md,
   },
   workoutIcon: {
     width: 36,
@@ -239,21 +360,17 @@ const styles = StyleSheet.create({
   workoutContent: {
     flex: 1,
   },
-  workoutHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: 2,
-  },
   workoutName: {
     fontSize: fontSize.base,
     fontWeight: fontWeight.medium,
     color: colors.white,
+    marginBottom: 2,
   },
   workoutMeta: {
     fontSize: fontSize.sm,
     color: colors.zinc500,
   },
+  // Empty state
   emptyHistory: {
     backgroundColor: colors.zinc900,
     borderRadius: radius.xl,

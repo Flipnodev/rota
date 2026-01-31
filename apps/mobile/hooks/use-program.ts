@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useFocusEffect } from "expo-router";
 import { useDatabase } from "@/providers/database-provider";
 import { useAuth } from "@/providers/auth-provider";
@@ -27,10 +27,12 @@ export interface ProgramWithWorkouts extends Program {
 interface UseProgramReturn {
   program: ProgramWithWorkouts | null;
   completedWorkoutIds: string[];
+  todayCompletedWorkoutIds: string[];
   completedWorkouts: number;
   totalWorkouts: number;
   progress: number;
   currentWeek: number;
+  hasStartedProgram: boolean;
   isLoading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
@@ -41,6 +43,9 @@ export function useProgram(programId: string | null): UseProgramReturn {
   const { user } = useAuth();
   const [program, setProgram] = useState<ProgramWithWorkouts | null>(null);
   const [completedWorkoutLogs, setCompletedWorkoutLogs] = useState<WorkoutLog[]>([]);
+  const [mappedCompletedWorkoutIds, setMappedCompletedWorkoutIds] = useState<string[]>([]);
+  const [todayCompletedWorkoutIds, setTodayCompletedWorkoutIds] = useState<string[]>([]);
+  const [hasStartedProgram, setHasStartedProgram] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -112,25 +117,59 @@ export function useProgram(programId: string | null): UseProgramReturn {
 
       setProgram(data as ProgramWithWorkouts);
 
-      // Fetch completed workout logs for this program (only for user's own programs)
-      if (user?.id && data && !data.is_template) {
-        // Only count logs where workout_id matches one of the program's actual workouts
-        const programWorkoutIds = data.workouts?.map((w: Workout) => w.id) || [];
+      // Fetch completed workout logs
+      if (user?.id && data) {
+        const programWorkouts = data.workouts || [];
+        const workoutIds = programWorkouts.map((w: Workout) => w.id);
 
-        const { data: logs, error: logsError } = await supabase
-          .from("workout_logs")
-          .select("*")
+        // Check if user has started this program (either template or their own)
+        const { data: userProgramEntry } = await supabase
+          .from("user_programs")
+          .select("id")
           .eq("user_id", user.id)
           .eq("program_id", programId)
-          .not("completed_at", "is", null)
-          .in("workout_id", programWorkoutIds.length > 0 ? programWorkoutIds : ["__none__"])
-          .order("completed_at", { ascending: true });
+          .maybeSingle();
 
-        if (!logsError) {
-          setCompletedWorkoutLogs(logs || []);
+        const userHasStarted = !!userProgramEntry || !data.is_template;
+        setHasStartedProgram(userHasStarted);
+
+        if (userHasStarted && workoutIds.length > 0) {
+          const { data: logs, error: logsError } = await supabase
+            .from("workout_logs")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("program_id", programId)
+            .not("completed_at", "is", null)
+            .in("workout_id", workoutIds)
+            .order("completed_at", { ascending: true });
+
+          if (!logsError && logs) {
+            const today = new Date();
+            const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+            const completedIds = logs.map((log: WorkoutLog) => log.workout_id);
+            const todayCompletedIds = logs
+              .filter((log: WorkoutLog) => new Date(log.started_at) >= startOfDay)
+              .map((log: WorkoutLog) => log.workout_id);
+            setCompletedWorkoutLogs(logs);
+            setMappedCompletedWorkoutIds(completedIds);
+            setTodayCompletedWorkoutIds(todayCompletedIds);
+          } else {
+            setCompletedWorkoutLogs([]);
+            setMappedCompletedWorkoutIds([]);
+            setTodayCompletedWorkoutIds([]);
+          }
+        } else {
+          setCompletedWorkoutLogs([]);
+          setMappedCompletedWorkoutIds([]);
+          setTodayCompletedWorkoutIds([]);
+          setHasStartedProgram(false);
         }
       } else {
         setCompletedWorkoutLogs([]);
+        setMappedCompletedWorkoutIds([]);
+        setTodayCompletedWorkoutIds([]);
+        setHasStartedProgram(false);
       }
     } catch (err) {
       setError(
@@ -157,7 +196,8 @@ export function useProgram(programId: string | null): UseProgramReturn {
   const completedWorkouts = completedWorkoutLogs.length;
 
   // Get IDs of completed workouts (for showing checkmarks)
-  const completedWorkoutIds = completedWorkoutLogs.map((log) => log.workout_id);
+  // Use mapped IDs which map user's copy workout IDs back to template workout IDs
+  const completedWorkoutIds = mappedCompletedWorkoutIds;
 
   // Calculate progress: completed / total * 100
   const progress = totalWorkouts > 0
@@ -176,10 +216,12 @@ export function useProgram(programId: string | null): UseProgramReturn {
   return {
     program,
     completedWorkoutIds,
+    todayCompletedWorkoutIds,
     completedWorkouts,
     totalWorkouts,
     progress,
     currentWeek,
+    hasStartedProgram,
     isLoading,
     error,
     refetch: fetchProgram,

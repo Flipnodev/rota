@@ -10,7 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
-import { ChevronRight, Target, Calendar, Dumbbell, Star } from "@/components/icons";
+import { ChevronRight, Dumbbell, Star } from "@/components/icons";
 import { usePrograms } from "@/hooks/use-programs";
 
 function capitalizeFirst(str: string): string {
@@ -19,7 +19,7 @@ function capitalizeFirst(str: string): string {
 
 export default function ProgramsScreen() {
   const router = useRouter();
-  const { activeProgram, templatePrograms, isPremium, isLoading, error } = usePrograms();
+  const { activeProgram, templatePrograms, isLoading } = usePrograms();
 
   if (isLoading) {
     return (
@@ -42,85 +42,86 @@ export default function ProgramsScreen() {
           </Text>
         </View>
 
-        {/* Active Program */}
+        {/* Current Active Program */}
         {activeProgram && (
           <Pressable
-            style={styles.activeCard}
+            style={[styles.programCard, styles.activeProgramCard]}
             onPress={() => router.push(`/program/${activeProgram.id}`)}
           >
-            <View style={styles.activeBadge}>
-              <Text style={styles.activeBadgeText}>ACTIVE</Text>
-            </View>
-            <Text style={styles.activeName}>{activeProgram.name}</Text>
-            <Text style={styles.activeDescription}>
-              {activeProgram.description || "No description"}
-            </Text>
+            <View style={styles.programContent}>
+              <View style={styles.programHeader}>
+                <Text style={[styles.programName, styles.activeProgramName]}>
+                  {activeProgram.name}
+                </Text>
+                <View style={styles.currentBadge}>
+                  <Text style={styles.currentBadgeText}>CURRENT</Text>
+                </View>
+              </View>
+              <Text style={styles.programDescription}>
+                {activeProgram.description || "No description"}
+              </Text>
 
-            <View style={styles.activeMeta}>
-              <View style={styles.metaItem}>
-                <Calendar size={16} color={colors.zinc400} />
-                <Text style={styles.metaText}>
-                  {activeProgram.duration_weeks} weeks
+              <View style={styles.programMeta}>
+                <View style={styles.levelBadge}>
+                  <Text style={styles.levelText}>
+                    {capitalizeFirst(activeProgram.difficulty)}
+                  </Text>
+                </View>
+                <Text style={styles.programDuration}>
+                  {activeProgram.duration_weeks} weeks · {activeProgram.days_per_week}{" "}
+                  days/week
                 </Text>
               </View>
-              <View style={styles.metaItem}>
-                <Target size={16} color={colors.zinc400} />
-                <Text style={styles.metaText}>
-                  {activeProgram.days_per_week} days/week
-                </Text>
-              </View>
             </View>
-
-            <View style={styles.activeFooter}>
-              <Text style={styles.continueText}>Continue program</Text>
-              <ChevronRight size={20} color={colors.emerald500} />
-            </View>
+            <ChevronRight size={20} color={colors.emerald500} />
           </Pressable>
         )}
 
         {/* Program Library */}
-        <View style={styles.section}>
+        <View style={[styles.section, activeProgram && styles.sectionWithActive]}>
           <Text style={styles.sectionTitle}>Program Library</Text>
 
-          {templatePrograms.length > 0 ? (
-            templatePrograms.map((program) => (
-              <Pressable
-                key={program.id}
-                style={[
-                  styles.programCard,
-                  program.is_premium && styles.premiumCard,
-                ]}
-                onPress={() => router.push(`/program/${program.id}`)}
-              >
-                <View style={styles.programContent}>
-                  <View style={styles.programHeader}>
-                    <Text style={styles.programName}>{program.name}</Text>
-                    {program.is_premium && (
-                      <View style={styles.premiumBadge}>
-                        <Star size={10} color={colors.amber500} />
-                        <Text style={styles.premiumBadgeText}>PREMIUM</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.programDescription}>
-                    {program.description || "No description"}
-                  </Text>
+          {templatePrograms.filter(p => p.id !== activeProgram?.id).length > 0 ? (
+            templatePrograms
+              .filter(p => p.id !== activeProgram?.id)
+              .map((program) => (
+                <Pressable
+                  key={program.id}
+                  style={[
+                    styles.programCard,
+                    program.is_premium && styles.premiumCard,
+                  ]}
+                  onPress={() => router.push(`/program/${program.id}`)}
+                >
+                  <View style={styles.programContent}>
+                    <View style={styles.programHeader}>
+                      <Text style={styles.programName}>{program.name}</Text>
+                      {program.is_premium && (
+                        <View style={styles.premiumBadge}>
+                          <Star size={10} color={colors.amber500} />
+                          <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.programDescription}>
+                      {program.description || "No description"}
+                    </Text>
 
-                  <View style={styles.programMeta}>
-                    <View style={styles.levelBadge}>
-                      <Text style={styles.levelText}>
-                        {capitalizeFirst(program.difficulty)}
+                    <View style={styles.programMeta}>
+                      <View style={styles.levelBadge}>
+                        <Text style={styles.levelText}>
+                          {capitalizeFirst(program.difficulty)}
+                        </Text>
+                      </View>
+                      <Text style={styles.programDuration}>
+                        {program.duration_weeks} weeks · {program.days_per_week}{" "}
+                        days/week
                       </Text>
                     </View>
-                    <Text style={styles.programDuration}>
-                      {program.duration_weeks} weeks · {program.days_per_week}{" "}
-                      days/week
-                    </Text>
                   </View>
-                </View>
-                <ChevronRight size={20} color={colors.zinc600} />
-              </Pressable>
-            ))
+                  <ChevronRight size={20} color={colors.zinc600} />
+                </Pressable>
+              ))
           ) : (
             <View style={styles.emptyLibrary}>
               <View style={styles.emptyIconContainer}>
@@ -166,68 +167,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.zinc400,
   },
-  activeCard: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.emerald500,
-  },
-  activeBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.emeraldAlpha20,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-    marginBottom: spacing.md,
-  },
-  activeBadgeText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.emerald500,
-    letterSpacing: 0.5,
-  },
-  activeName: {
-    fontSize: fontSize["2xl"],
-    fontWeight: fontWeight.bold,
-    color: colors.white,
-    marginBottom: spacing.xs,
-  },
-  activeDescription: {
-    fontSize: fontSize.sm,
-    color: colors.zinc400,
-    marginBottom: spacing.md,
-  },
-  activeMeta: {
-    flexDirection: "row",
-    gap: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  metaText: {
-    fontSize: fontSize.sm,
-    color: colors.zinc400,
-  },
-  activeFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.zinc800,
-  },
-  continueText: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.medium,
-    color: colors.emerald500,
-  },
   section: {
     marginTop: spacing.xl,
     marginBottom: spacing.xl,
+  },
+  sectionWithActive: {
+    marginTop: spacing.lg,
   },
   sectionTitle: {
     fontSize: fontSize.lg,
@@ -248,6 +193,28 @@ const styles = StyleSheet.create({
   premiumCard: {
     borderColor: colors.amber500,
     backgroundColor: colors.zinc900,
+  },
+  activeProgramCard: {
+    borderColor: colors.emerald500,
+    backgroundColor: colors.emeraldAlpha10,
+  },
+  activeProgramName: {
+    color: colors.emerald500,
+  },
+  currentBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.emeraldAlpha20,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+  },
+  currentBadgeText: {
+    fontSize: 9,
+    fontWeight: fontWeight.bold,
+    color: colors.emerald500,
+    letterSpacing: 0.5,
   },
   programContent: {
     flex: 1,
