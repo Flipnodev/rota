@@ -11,7 +11,8 @@ import { showAlert, showError } from "@/lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
-import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
+import { colors, spacing, fontSize, fontWeight } from "@/constants/theme";
+import { layout, header as headerStyles, typography, card, button, iconContainer } from "@/constants/styles";
 import { ChevronLeft, Check, Calendar } from "@/components/icons";
 import { useProfile } from "@/hooks/use-profile";
 
@@ -70,8 +71,8 @@ export default function ScheduleScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.loadingContainer}>
+      <SafeAreaView style={layout.container} edges={["top"]}>
+        <View style={layout.centered}>
           <ActivityIndicator size="large" color={colors.emerald500} />
         </View>
       </SafeAreaView>
@@ -79,15 +80,15 @@ export default function ScheduleScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={layout.container} edges={["top"]}>
+      <ScrollView style={layout.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <View style={headerStyles.containerRow}>
+          <Pressable style={headerStyles.backButton} onPress={() => router.back()}>
             <ChevronLeft size={24} color={colors.white} />
           </Pressable>
-          <Text style={styles.title}>Workout Schedule</Text>
-          <View style={styles.backButtonPlaceholder} />
+          <Text style={typography.screenTitle}>Workout Schedule</Text>
+          <View style={headerStyles.placeholder} />
         </View>
 
         {/* Description */}
@@ -96,8 +97,8 @@ export default function ScheduleScreen() {
         </Text>
 
         {/* Current Schedule Info */}
-        <View style={styles.infoCard}>
-          <View style={styles.infoIconContainer}>
+        <View style={card.info}>
+          <View style={iconContainer.md}>
             <Calendar size={24} color={colors.emerald500} />
           </View>
           <View style={styles.infoContent}>
@@ -114,8 +115,8 @@ export default function ScheduleScreen() {
             <Pressable
               key={schedule.id}
               style={[
-                styles.scheduleCard,
-                selectedSchedule === schedule.id && styles.scheduleCardSelected,
+                card.selectable,
+                selectedSchedule === schedule.id && card.selected,
               ]}
               onPress={() => setSelectedSchedule(schedule.id)}
             >
@@ -128,7 +129,7 @@ export default function ScheduleScreen() {
                 >
                   {schedule.label}
                 </Text>
-                <Text style={styles.scheduleDescription}>{schedule.description}</Text>
+                <Text style={typography.bodySm}>{schedule.description}</Text>
               </View>
               {selectedSchedule === schedule.id && (
                 <View style={styles.checkCircle}>
@@ -141,14 +142,14 @@ export default function ScheduleScreen() {
 
         {/* Save Button */}
         <Pressable
-          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+          style={[button.primary, isSaving && button.disabled]}
           onPress={handleSave}
           disabled={isSaving}
         >
           {isSaving ? (
             <ActivityIndicator size="small" color={colors.black} />
           ) : (
-            <Text style={styles.saveButtonText}>Save Schedule</Text>
+            <Text style={button.primaryText}>Save Schedule</Text>
           )}
         </Pressable>
       </ScrollView>
@@ -157,64 +158,11 @@ export default function ScheduleScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.black,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scroll: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: spacing.md,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.zinc900,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backButtonPlaceholder: {
-    width: 40,
-  },
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.white,
-  },
   description: {
     fontSize: fontSize.base,
     color: colors.zinc400,
     lineHeight: 24,
     marginBottom: spacing.lg,
-  },
-  infoCard: {
-    flexDirection: "row",
-    backgroundColor: colors.emeraldAlpha10,
-    borderRadius: radius.xl,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.emerald500,
-    marginBottom: spacing.xl,
-    gap: spacing.md,
-  },
-  infoIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.emeraldAlpha20,
-    alignItems: "center",
-    justifyContent: "center",
   },
   infoContent: {
     flex: 1,
@@ -233,19 +181,7 @@ const styles = StyleSheet.create({
   scheduleList: {
     gap: spacing.md,
     marginBottom: spacing.xl,
-  },
-  scheduleCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.zinc900,
-    padding: spacing.md,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-  },
-  scheduleCardSelected: {
-    borderColor: colors.emerald500,
-    backgroundColor: colors.emeraldAlpha10,
+    marginTop: spacing.xl,
   },
   scheduleContent: {
     flex: 1,
@@ -259,10 +195,6 @@ const styles = StyleSheet.create({
   scheduleLabelSelected: {
     color: colors.emerald500,
   },
-  scheduleDescription: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
-  },
   checkCircle: {
     width: 24,
     height: 24,
@@ -270,21 +202,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.emerald500,
     alignItems: "center",
     justifyContent: "center",
-  },
-  saveButton: {
-    backgroundColor: colors.emerald500,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.xl,
-  },
-  saveButtonDisabled: {
-    backgroundColor: colors.zinc800,
-  },
-  saveButtonText: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-    color: colors.black,
   },
 });

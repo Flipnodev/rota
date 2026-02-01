@@ -843,32 +843,5 @@ export const Constants = {
     },
   },
 } as const
-
-// Convenience type aliases
-export type Profile = Tables<'profiles'>;
-export type Exercise = Tables<'exercises'>;
-export type Program = Tables<'programs'>;
-export type Workout = Tables<'workouts'>;
-export type WorkoutExercise = Tables<'workout_exercises'>;
-export type ExerciseSet = Tables<'exercise_sets'>;
-export type WorkoutLog = Tables<'workout_logs'>;
-export type SetLog = Tables<'set_logs'>;
-export type Subscription = Tables<'subscriptions'>;
-export type Coupon = Tables<'coupons'>;
-export type CouponRedemption = Tables<'coupon_redemptions'>;
-export type AuditLog = Tables<'audit_log'>;
-export type UserProgram = Tables<'user_programs'>;
-
-// Enum type aliases
-export type DifficultyLevel = Enums<'difficulty_level'>;
-export type ProgramGoal = Enums<'program_goal'>;
-export type MuscleGroup = Enums<'muscle_group'>;
-export type EquipmentType = Enums<'equipment_type'>;
-export type SubscriptionStatus = Enums<'subscription_status'>;
-export type SubscriptionPlan = Enums<'subscription_plan'>;
-export type SubscriptionProvider = Enums<'subscription_provider'>;
-export type ProgramStatus = Enums<'program_status'>;
-
-// For backwards compatibility
-export type InsertTables<T extends keyof Database['public']['Tables']> = TablesInsert<T>;
-export type UpdateTables<T extends keyof Database['public']['Tables']> = TablesUpdate<T>;
+A new version of Supabase CLI is available: v2.72.7 (currently installed v1.226.4)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

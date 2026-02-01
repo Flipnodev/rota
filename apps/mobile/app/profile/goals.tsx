@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
+import { layout, header as headerStyles, typography, card, button, iconContainer } from "@/constants/styles";
 import { ChevronLeft, Check, Target, Dumbbell, Calendar } from "@/components/icons";
 import { useProfile } from "@/hooks/use-profile";
 
@@ -69,8 +70,8 @@ export default function GoalsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.loadingContainer}>
+      <SafeAreaView style={layout.container} edges={["top"]}>
+        <View style={layout.centered}>
           <ActivityIndicator size="large" color={colors.emerald500} />
         </View>
       </SafeAreaView>
@@ -78,15 +79,15 @@ export default function GoalsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={layout.container} edges={["top"]}>
+      <ScrollView style={layout.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <View style={headerStyles.containerRow}>
+          <Pressable style={headerStyles.backButton} onPress={() => router.back()}>
             <ChevronLeft size={24} color={colors.white} />
           </Pressable>
-          <Text style={styles.title}>Fitness Goals</Text>
-          <View style={styles.backButtonPlaceholder} />
+          <Text style={typography.screenTitle}>Fitness Goals</Text>
+          <View style={headerStyles.placeholder} />
         </View>
 
         {/* Description */}
@@ -100,14 +101,14 @@ export default function GoalsScreen() {
             <Pressable
               key={goal.id}
               style={[
-                styles.goalCard,
-                selectedGoal === goal.id && styles.goalCardSelected,
+                card.selectable,
+                selectedGoal === goal.id && card.selected,
               ]}
               onPress={() => setSelectedGoal(goal.id)}
             >
               <View style={[
-                styles.goalIconContainer,
-                selectedGoal === goal.id && styles.goalIconContainerSelected,
+                iconContainer.lg,
+                selectedGoal === goal.id && styles.iconContainerSelected,
               ]}>
                 <goal.icon
                   size={24}
@@ -123,7 +124,7 @@ export default function GoalsScreen() {
                 >
                   {goal.label}
                 </Text>
-                <Text style={styles.goalDescription}>{goal.description}</Text>
+                <Text style={typography.bodySm}>{goal.description}</Text>
               </View>
               {selectedGoal === goal.id && (
                 <View style={styles.checkCircle}>
@@ -136,14 +137,14 @@ export default function GoalsScreen() {
 
         {/* Save Button */}
         <Pressable
-          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+          style={[button.primary, isSaving && button.disabled]}
           onPress={handleSave}
           disabled={isSaving}
         >
           {isSaving ? (
             <ActivityIndicator size="small" color={colors.black} />
           ) : (
-            <Text style={styles.saveButtonText}>Save Goal</Text>
+            <Text style={button.primaryText}>Save Goal</Text>
           )}
         </Pressable>
       </ScrollView>
@@ -152,41 +153,6 @@ export default function GoalsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.black,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scroll: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: spacing.md,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.zinc900,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backButtonPlaceholder: {
-    width: 40,
-  },
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.white,
-  },
   description: {
     fontSize: fontSize.base,
     color: colors.zinc400,
@@ -197,29 +163,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.xl,
   },
-  goalCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.zinc900,
-    padding: spacing.md,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-    gap: spacing.md,
-  },
-  goalCardSelected: {
-    borderColor: colors.emerald500,
-    backgroundColor: colors.emeraldAlpha10,
-  },
-  goalIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.lg,
-    backgroundColor: colors.whiteAlpha5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  goalIconContainerSelected: {
+  iconContainerSelected: {
     backgroundColor: colors.emeraldAlpha20,
   },
   goalContent: {
@@ -234,10 +178,6 @@ const styles = StyleSheet.create({
   goalLabelSelected: {
     color: colors.emerald500,
   },
-  goalDescription: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
-  },
   checkCircle: {
     width: 24,
     height: 24,
@@ -245,21 +185,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.emerald500,
     alignItems: "center",
     justifyContent: "center",
-  },
-  saveButton: {
-    backgroundColor: colors.emerald500,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.xl,
-  },
-  saveButtonDisabled: {
-    backgroundColor: colors.zinc800,
-  },
-  saveButtonText: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-    color: colors.black,
   },
 });

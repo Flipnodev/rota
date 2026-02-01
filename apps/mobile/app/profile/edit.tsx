@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
+import { layout, header as headerStyles, typography, input, button } from "@/constants/styles";
 import { ChevronLeft } from "@/components/icons";
 import { useProfile } from "@/hooks/use-profile";
 
@@ -66,8 +67,8 @@ export default function EditProfileScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.loadingContainer}>
+      <SafeAreaView style={layout.container} edges={["top"]}>
+        <View style={layout.centered}>
           <ActivityIndicator size="large" color={colors.emerald500} />
         </View>
       </SafeAreaView>
@@ -77,19 +78,19 @@ export default function EditProfileScreen() {
   const initials = getInitials(displayName || profile?.display_name || null, profile?.email || null);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={layout.container} edges={["top"]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
-        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView style={layout.scroll} showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <View style={styles.header}>
-            <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <View style={headerStyles.containerRow}>
+            <Pressable style={headerStyles.backButton} onPress={() => router.back()}>
               <ChevronLeft size={24} color={colors.white} />
             </Pressable>
-            <Text style={styles.title}>Edit Profile</Text>
-            <View style={styles.backButtonPlaceholder} />
+            <Text style={typography.screenTitle}>Edit Profile</Text>
+            <View style={headerStyles.placeholder} />
           </View>
 
           {/* Avatar Section */}
@@ -100,15 +101,15 @@ export default function EditProfileScreen() {
             <Pressable style={styles.changeAvatarButton}>
               <Text style={styles.changeAvatarText}>Change Avatar</Text>
             </Pressable>
-            <Text style={styles.avatarHint}>Avatar upload coming soon</Text>
+            <Text style={typography.caption}>Avatar upload coming soon</Text>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Display Name</Text>
+            <View style={input.group}>
+              <Text style={input.label}>Display Name</Text>
               <TextInput
-                style={styles.input}
+                style={input.base}
                 value={displayName}
                 onChangeText={setDisplayName}
                 placeholder="Enter your display name"
@@ -118,25 +119,25 @@ export default function EditProfileScreen() {
               />
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <View style={styles.disabledInput}>
+            <View style={input.group}>
+              <Text style={input.label}>Email</Text>
+              <View style={[input.base, input.disabled]}>
                 <Text style={styles.disabledInputText}>{profile?.email}</Text>
               </View>
-              <Text style={styles.inputHint}>Email cannot be changed</Text>
+              <Text style={typography.caption}>Email cannot be changed</Text>
             </View>
           </View>
 
           {/* Save Button */}
           <Pressable
-            style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+            style={[button.primary, isSaving && button.disabled]}
             onPress={handleSave}
             disabled={isSaving}
           >
             {isSaving ? (
               <ActivityIndicator size="small" color={colors.black} />
             ) : (
-              <Text style={styles.saveButtonText}>Save Changes</Text>
+              <Text style={button.primaryText}>Save Changes</Text>
             )}
           </Pressable>
         </ScrollView>
@@ -146,43 +147,8 @@ export default function EditProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.black,
-  },
   keyboardView: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scroll: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: spacing.md,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.zinc900,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backButtonPlaceholder: {
-    width: 40,
-  },
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.white,
   },
   avatarSection: {
     alignItems: "center",
@@ -209,70 +175,19 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.zinc800,
+    marginBottom: spacing.sm,
   },
   changeAvatarText: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
     color: colors.white,
   },
-  avatarHint: {
-    fontSize: fontSize.xs,
-    color: colors.zinc600,
-    marginTop: spacing.sm,
-  },
   form: {
     gap: spacing.lg,
     marginBottom: spacing.xl,
   },
-  inputGroup: {
-    gap: spacing.sm,
-  },
-  label: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.zinc400,
-    marginLeft: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    fontSize: fontSize.base,
-    color: colors.white,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-  },
-  disabledInput: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-    opacity: 0.6,
-  },
   disabledInputText: {
     fontSize: fontSize.base,
     color: colors.zinc500,
-  },
-  inputHint: {
-    fontSize: fontSize.xs,
-    color: colors.zinc600,
-    marginLeft: spacing.xs,
-  },
-  saveButton: {
-    backgroundColor: colors.emerald500,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.xl,
-  },
-  saveButtonDisabled: {
-    backgroundColor: colors.zinc800,
-  },
-  saveButtonText: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-    color: colors.black,
   },
 });

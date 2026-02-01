@@ -19,13 +19,8 @@ import {
   User,
   Dumbbell,
 } from "@/components/icons";
-import {
-  colors,
-  fontSize,
-  fontWeight,
-  radius,
-  spacing,
-} from "@/constants/theme";
+import { colors, fontSize, fontWeight, radius, spacing } from "@/constants/theme";
+import { layout, header as headerStyles, typography, card, section as sectionStyles, listItem, iconContainer } from "@/constants/styles";
 import { useProfile } from "@/hooks/use-profile";
 import { useWorkoutLogs } from "@/hooks/use-workout-logs";
 import { useActiveProgram } from "@/hooks/use-active-program";
@@ -115,7 +110,7 @@ export default function ProfileScreen() {
             if (error) {
               showError("Error", "Failed to sign out. Please try again.");
             } else {
-              router.replace("/auth");
+              router.replace("/auth/sign-in");
             }
           } catch (err) {
             showError("Error", "Failed to sign out. Please try again.");
@@ -127,8 +122,8 @@ export default function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.loadingContainer}>
+      <SafeAreaView style={layout.container} edges={["top"]}>
+        <View style={layout.centered}>
           <ActivityIndicator size="large" color={colors.emerald500} />
         </View>
       </SafeAreaView>
@@ -144,75 +139,75 @@ export default function ProfileScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={layout.container} edges={["top"]}>
+      <ScrollView style={layout.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Profile</Text>
+        <View style={headerStyles.container}>
+          <Text style={typography.pageTitle}>Profile</Text>
         </View>
 
         {/* User Card */}
-        <View style={styles.userCard}>
+        <View style={[card.large, styles.userCard]}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{displayName}</Text>
-            <Text style={styles.userEmail}>{email}</Text>
+            <Text style={typography.bodySm}>{email}</Text>
           </View>
         </View>
 
         {/* Stats Summary */}
-        <View style={styles.statsRow}>
+        <View style={[card.large, styles.statsRow]}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{stats.totalWorkouts}</Text>
-            <Text style={styles.statLabel}>Workouts</Text>
+            <Text style={typography.caption}>Workouts</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{stats.thisMonth}</Text>
-            <Text style={styles.statLabel}>This Month</Text>
+            <Text style={typography.caption}>This Month</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{stats.streak}</Text>
-            <Text style={styles.statLabel}>Day Streak</Text>
+            <Text style={typography.caption}>Day Streak</Text>
           </View>
         </View>
 
         {/* Current Program & Goals */}
         {(activeProgram || currentGoal || currentSchedule) && (
-          <View style={styles.currentInfoCard}>
+          <View style={[card.large, styles.infoCard]}>
             {activeProgram && (
-              <View style={styles.infoRow}>
-                <View style={styles.infoIconContainer}>
+              <View style={[layout.row, layout.gapSm]}>
+                <View style={iconContainer.sm}>
                   <Dumbbell size={16} color={colors.emerald500} />
                 </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Current Program</Text>
-                  <Text style={styles.infoValue}>{activeProgram.program?.name}</Text>
+                <View style={listItem.content}>
+                  <Text style={typography.caption}>Current Program</Text>
+                  <Text style={listItem.title}>{activeProgram.program?.name}</Text>
                 </View>
               </View>
             )}
             {currentGoal && (
-              <View style={styles.infoRow}>
-                <View style={styles.infoIconContainer}>
+              <View style={[layout.row, layout.gapSm]}>
+                <View style={iconContainer.sm}>
                   <Target size={16} color={colors.emerald500} />
                 </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Fitness Goal</Text>
-                  <Text style={styles.infoValue}>{currentGoal}</Text>
+                <View style={listItem.content}>
+                  <Text style={typography.caption}>Fitness Goal</Text>
+                  <Text style={listItem.title}>{currentGoal}</Text>
                 </View>
               </View>
             )}
             {currentSchedule && (
-              <View style={styles.infoRow}>
-                <View style={styles.infoIconContainer}>
+              <View style={[layout.row, layout.gapSm]}>
+                <View style={iconContainer.sm}>
                   <Calendar size={16} color={colors.emerald500} />
                 </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Training Schedule</Text>
-                  <Text style={styles.infoValue}>{currentSchedule}</Text>
+                <View style={listItem.content}>
+                  <Text style={typography.caption}>Training Schedule</Text>
+                  <Text style={listItem.title}>{currentSchedule}</Text>
                 </View>
               </View>
             )}
@@ -221,22 +216,22 @@ export default function ProfileScreen() {
 
         {/* Menu Sections */}
         {MENU_ITEMS.map((section) => (
-          <View key={section.title} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
+          <View key={section.title} style={sectionStyles.container}>
+            <Text style={sectionStyles.title}>{section.title}</Text>
             <View style={styles.menuCard}>
               {section.items.map((item, index) => (
                 <Pressable
                   key={item.label}
                   style={[
-                    styles.menuItem,
-                    index < section.items.length - 1 && styles.menuItemBorder,
+                    listItem.base,
+                    index < section.items.length - 1 && listItem.bordered,
                   ]}
                   onPress={() => router.push(item.route as any)}
                 >
                   <View style={styles.menuItemIcon}>
                     <item.icon size={20} color={colors.zinc400} />
                   </View>
-                  <Text style={styles.menuItemLabel}>{item.label}</Text>
+                  <Text style={listItem.title}>{item.label}</Text>
                   <ChevronRight size={20} color={colors.zinc600} />
                 </Pressable>
               ))}
@@ -263,36 +258,9 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.black,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scroll: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  header: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-  },
-  title: {
-    fontSize: fontSize["3xl"],
-    fontWeight: fontWeight.bold,
-    color: colors.white,
-  },
   userCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.xl,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
     marginBottom: spacing.lg,
   },
   avatar: {
@@ -318,28 +286,8 @@ const styles = StyleSheet.create({
     color: colors.white,
     marginBottom: 2,
   },
-  userEmail: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
-  },
-  editButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.whiteAlpha5,
-    borderRadius: radius.md,
-  },
-  editButtonText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.white,
-  },
   statsRow: {
     flexDirection: "row",
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.xl,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
     marginBottom: spacing.lg,
   },
   statItem: {
@@ -351,61 +299,14 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.white,
   },
-  statLabel: {
-    fontSize: fontSize.xs,
-    color: colors.zinc500,
-    marginTop: 2,
-  },
   statDivider: {
     width: 1,
     backgroundColor: colors.zinc800,
     marginVertical: spacing.xs,
   },
-  currentInfoCard: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.xl,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
+  infoCard: {
     marginBottom: spacing.lg,
     gap: spacing.sm,
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  infoIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.md,
-    backgroundColor: colors.emeraldAlpha10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: fontSize.xs,
-    color: colors.zinc500,
-  },
-  infoValue: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.white,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.zinc500,
-    marginBottom: spacing.sm,
-    marginLeft: spacing.xs,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
   menuCard: {
     backgroundColor: colors.zinc900,
@@ -413,15 +314,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.zinc800,
     overflow: "hidden",
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: spacing.md,
-  },
-  menuItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.zinc800,
   },
   menuItemIcon: {
     width: 36,
@@ -431,11 +323,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: spacing.md,
-  },
-  menuItemLabel: {
-    flex: 1,
-    fontSize: fontSize.base,
-    color: colors.white,
   },
   logoutButton: {
     backgroundColor: colors.zinc900,

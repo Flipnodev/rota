@@ -39,6 +39,7 @@ import {
   type ExerciseType,
 } from "@/hooks/use-program-editor";
 import { useExercises } from "@/hooks/use-exercises";
+import { useActiveProgram } from "@/hooks/use-active-program";
 
 type Step = "info" | "workouts" | "exercises" | "review";
 
@@ -88,6 +89,8 @@ export default function CreateProgramScreen() {
     canSave,
     getValidationErrors,
   } = useProgramEditor();
+
+  const { startProgram } = useActiveProgram();
 
   const [currentStep, setCurrentStep] = useState<Step>("info");
   const [selectedWorkoutIndex, setSelectedWorkoutIndex] = useState<
@@ -139,9 +142,36 @@ export default function CreateProgramScreen() {
   const handleNext = async () => {
     if (isLastStep) {
       const result = await saveProgram();
-      if (result.success) {
-        showAlert("Program Created", "Your program is ready to use!");
-        router.replace(`/program/${result.programId}`);
+      if (result.success && result.programId) {
+        // Ask user if they want to activate the program
+        showAlert(
+          "Program Created",
+          "Your program has been saved. Would you like to start it now?",
+          [
+            {
+              text: "Later",
+              style: "cancel",
+              onPress: () => router.replace(`/program/${result.programId}`),
+            },
+            {
+              text: "Start Now",
+              style: "default",
+              onPress: async () => {
+                const startResult = await startProgram(result.programId!);
+                if (startResult.success) {
+                  showAlert(
+                    "Program Activated",
+                    "Your program is now active. Ready to train!",
+                    [{ text: "OK", onPress: () => router.replace(`/program/${result.programId}`) }]
+                  );
+                } else {
+                  showError("Error", startResult.error || "Could not activate program");
+                  router.replace(`/program/${result.programId}`);
+                }
+              },
+            },
+          ]
+        );
       } else {
         showError("Error", result.error || "Could not save the program");
       }

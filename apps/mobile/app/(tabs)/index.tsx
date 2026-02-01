@@ -10,7 +10,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
+import { layout, header as headerStyles, typography, card, button } from "@/constants/styles";
 import { TrendingUp, Calendar, ChevronRight, Dumbbell, Check } from "@/components/icons";
+import { StatCard, EmptyState, Badge, ProgressBar } from "@/components/ui";
 import { useProfile } from "@/hooks/use-profile";
 import { useActiveProgram } from "@/hooks/use-active-program";
 import { useWorkoutLogs } from "@/hooks/use-workout-logs";
@@ -46,8 +48,8 @@ export default function HomeScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.loadingContainer}>
+      <SafeAreaView style={layout.container} edges={["top"]}>
+        <View style={layout.centered}>
           <ActivityIndicator size="large" color={colors.emerald500} />
         </View>
       </SafeAreaView>
@@ -55,35 +57,30 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={layout.container} edges={["top"]}>
+      <ScrollView style={layout.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.greeting}>
+        <View style={headerStyles.container}>
+          <Text style={typography.subtitle}>
             {getGreeting()}, {displayName}
           </Text>
-          <Text style={styles.title}>Ready to train?</Text>
+          <Text style={typography.pageTitle}>Ready to train?</Text>
         </View>
 
         {/* Active Program Card */}
         {activeProgram ? (
           <Pressable
-            style={styles.programCard}
+            style={card.large}
             onPress={() => router.push(`/program/${activeProgram.program.id}`)}
           >
-            <View style={styles.programBadge}>
-              <Text style={styles.programBadgeText}>CURRENT PROGRAM</Text>
-            </View>
+            <Badge label="CURRENT PROGRAM" variant="success" size="md" />
             <Text style={styles.programName}>{activeProgram.program.name}</Text>
             <Text style={styles.programMeta}>
               {programStartedAt ? `Day ${currentProgramDay}` : "Not started"} · Week {currentWeek} of {totalWeeks} · {completedWorkouts}/{totalWorkouts} workouts
             </Text>
 
             <View style={styles.programProgress}>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${progress}%` }]} />
-              </View>
-              <Text style={styles.progressText}>{progress}% complete</Text>
+              <ProgressBar progress={progress} showLabel />
             </View>
 
             {isTodaysWorkoutCompleted ? (
@@ -94,8 +91,8 @@ export default function HomeScreen() {
                 </Text>
               </View>
             ) : (
-              <View style={styles.viewProgramButton}>
-                <Text style={styles.viewProgramButtonText}>
+              <View style={button.secondary}>
+                <Text style={button.secondaryText}>
                   {todaysWorkout ? "View Today's Workout" : "View Program"}
                 </Text>
                 <ChevronRight size={18} color={colors.emerald500} />
@@ -103,35 +100,27 @@ export default function HomeScreen() {
             )}
           </Pressable>
         ) : (
-          <View style={styles.emptyProgramCard}>
-            <View style={styles.emptyIconContainer}>
-              <Dumbbell size={32} color={colors.zinc500} />
-            </View>
-            <Text style={styles.emptyTitle}>No Active Program</Text>
-            <Text style={styles.emptyText}>
-              Choose a program from the library to get started
-            </Text>
-            <Pressable
-              style={styles.browseProgramsButton}
-              onPress={() => router.push("/(tabs)/programs")}
-            >
-              <Text style={styles.browseProgramsText}>Browse Programs</Text>
-            </Pressable>
-          </View>
+          <EmptyState
+            icon={<Dumbbell size={32} color={colors.zinc500} />}
+            title="No Active Program"
+            description="Choose a program from the library to get started"
+            actionLabel="Browse Programs"
+            onAction={() => router.push("/(tabs)/programs")}
+          />
         )}
 
         {/* Quick Stats */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <TrendingUp size={20} color={colors.emerald500} />
-            <Text style={styles.statValue}>{stats.totalWorkouts}</Text>
-            <Text style={styles.statLabel}>Workouts</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Calendar size={20} color={colors.emerald500} />
-            <Text style={styles.statValue}>{stats.thisWeek}</Text>
-            <Text style={styles.statLabel}>This Week</Text>
-          </View>
+          <StatCard
+            icon={<TrendingUp size={20} color={colors.emerald500} />}
+            value={stats.totalWorkouts}
+            label="Workouts"
+          />
+          <StatCard
+            icon={<Calendar size={20} color={colors.emerald500} />}
+            value={stats.thisWeek}
+            label="This Week"
+          />
         </View>
 
       </ScrollView>
@@ -140,58 +129,11 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.black,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scroll: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  header: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-  },
-  greeting: {
-    fontSize: fontSize.base,
-    color: colors.zinc400,
-    marginBottom: spacing.xs,
-  },
-  title: {
-    fontSize: fontSize["3xl"],
-    fontWeight: fontWeight.bold,
-    color: colors.white,
-  },
-  programCard: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-  },
-  programBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.emeraldAlpha20,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-    marginBottom: spacing.md,
-  },
-  programBadgeText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.emerald500,
-    letterSpacing: 0.5,
-  },
   programName: {
     fontSize: fontSize["2xl"],
     fontWeight: fontWeight.bold,
     color: colors.white,
+    marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
   programMeta: {
@@ -201,35 +143,6 @@ const styles = StyleSheet.create({
   },
   programProgress: {
     marginBottom: spacing.lg,
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: colors.zinc800,
-    borderRadius: radius.full,
-    marginBottom: spacing.sm,
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: colors.emerald500,
-    borderRadius: radius.full,
-  },
-  progressText: {
-    fontSize: fontSize.xs,
-    color: colors.zinc500,
-  },
-  viewProgramButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.zinc800,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    gap: spacing.xs,
-  },
-  viewProgramButtonText: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.medium,
-    color: colors.emerald500,
   },
   completedButton: {
     flexDirection: "row",
@@ -247,69 +160,9 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.emerald500,
   },
-  emptyProgramCard: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-    alignItems: "center",
-  },
-  emptyIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.whiteAlpha5,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  emptyTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.white,
-    marginBottom: spacing.sm,
-  },
-  emptyText: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
-    textAlign: "center",
-    marginBottom: spacing.lg,
-  },
-  browseProgramsButton: {
-    backgroundColor: colors.emerald500,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-  },
-  browseProgramsText: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-    color: colors.black,
-  },
   statsRow: {
     flexDirection: "row",
     gap: spacing.md,
     marginTop: spacing.lg,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.xl,
-    padding: spacing.md,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-  },
-  statValue: {
-    fontSize: fontSize["2xl"],
-    fontWeight: fontWeight.bold,
-    color: colors.white,
-    marginTop: spacing.sm,
-  },
-  statLabel: {
-    fontSize: fontSize.xs,
-    color: colors.zinc500,
-    marginTop: spacing.xs,
   },
 });

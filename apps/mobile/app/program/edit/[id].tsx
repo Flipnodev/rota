@@ -38,6 +38,7 @@ import {
   type ExerciseType,
 } from "@/hooks/use-program-editor";
 import { useExercises } from "@/hooks/use-exercises";
+import { useActiveProgram } from "@/hooks/use-active-program";
 
 type Step = "info" | "workouts" | "exercises" | "review";
 
@@ -92,6 +93,11 @@ export default function EditProgramScreen() {
     getValidationErrors,
   } = useProgramEditor();
 
+  const { activeProgram, startProgram } = useActiveProgram();
+
+  // Check if this program is already active
+  const isAlreadyActive = activeProgram?.program?.id === id;
+
   const [currentStep, setCurrentStep] = useState<Step>("info");
   const [selectedWorkoutIndex, setSelectedWorkoutIndex] = useState<
     number | null
@@ -144,9 +150,42 @@ export default function EditProgramScreen() {
   const handleNext = async () => {
     if (isLastStep) {
       const result = await saveProgram();
-      if (result.success) {
-        showAlert("Changes Saved", "Your program has been updated!");
-        router.replace(`/program/${result.programId}`);
+      if (result.success && result.programId) {
+        // If program is already active, just show success message
+        if (isAlreadyActive) {
+          showAlert("Changes Saved", "Your program has been updated!");
+          router.replace(`/program/${result.programId}`);
+        } else {
+          // Ask user if they want to activate the program
+          showAlert(
+            "Changes Saved",
+            "Your program has been updated. Would you like to start it now?",
+            [
+              {
+                text: "Later",
+                style: "cancel",
+                onPress: () => router.replace(`/program/${result.programId}`),
+              },
+              {
+                text: "Start Now",
+                style: "default",
+                onPress: async () => {
+                  const startResult = await startProgram(result.programId!);
+                  if (startResult.success) {
+                    showAlert(
+                      "Program Activated",
+                      "Your program is now active. Ready to train!",
+                      [{ text: "OK", onPress: () => router.replace(`/program/${result.programId}`) }]
+                    );
+                  } else {
+                    showError("Error", startResult.error || "Could not activate program");
+                    router.replace(`/program/${result.programId}`);
+                  }
+                },
+              },
+            ]
+          );
+        }
       } else {
         showError("Error", result.error || "Could not save changes");
       }

@@ -4,7 +4,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 
-import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
+import { colors, spacing, fontSize, fontWeight } from "@/constants/theme";
+import { layout, selection, success } from "@/constants/styles";
 import {
   ChevronRight,
   ChevronLeft,
@@ -35,26 +36,14 @@ const GOALS = [
 ];
 
 const EXPERIENCE = [
-  {
-    id: "beginner",
-    label: "Beginner",
-    description: "New to strength training",
-  },
-  {
-    id: "intermediate",
-    label: "Intermediate",
-    description: "1-2 years of training",
-  },
+  { id: "beginner", label: "Beginner", description: "New to strength training" },
+  { id: "intermediate", label: "Intermediate", description: "1-2 years of training" },
   { id: "advanced", label: "Advanced", description: "3+ years of training" },
 ];
 
 const EQUIPMENT = [
   { id: "full", label: "Full Gym", description: "Access to all equipment" },
-  {
-    id: "basic",
-    label: "Basic Gym",
-    description: "Barbells, dumbbells, cables",
-  },
+  { id: "basic", label: "Basic Gym", description: "Barbells, dumbbells, cables" },
   { id: "home", label: "Home Gym", description: "Limited equipment at home" },
   { id: "none", label: "Bodyweight Only", description: "No equipment needed" },
 ];
@@ -72,12 +61,8 @@ export default function OnboardingScreen() {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<Step>("welcome");
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
-  const [selectedExperience, setSelectedExperience] = useState<string | null>(
-    null
-  );
-  const [selectedEquipment, setSelectedEquipment] = useState<string | null>(
-    null
-  );
+  const [selectedExperience, setSelectedExperience] = useState<string | null>(null);
+  const [selectedEquipment, setSelectedEquipment] = useState<string | null>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -106,7 +91,6 @@ export default function OnboardingScreen() {
 
   const handleNext = async () => {
     if (isLastStep) {
-      // Save user preferences to Supabase profile
       setIsSaving(true);
       try {
         if (!user?.id) {
@@ -135,10 +119,7 @@ export default function OnboardingScreen() {
         router.replace("/(tabs)");
       } catch (error) {
         console.error("Failed to save onboarding data:", error);
-        showError(
-          "Error",
-          "Failed to save your preferences. Please try again."
-        );
+        showError("Error", "Failed to save your preferences. Please try again.");
       } finally {
         setIsSaving(false);
       }
@@ -157,7 +138,7 @@ export default function OnboardingScreen() {
     switch (currentStep) {
       case "welcome":
         return (
-          <View style={styles.stepContent}>
+          <View style={selection.stepContent}>
             <View style={styles.logoContainer}>
               <Text style={styles.logo}>ROTA</Text>
             </View>
@@ -174,39 +155,35 @@ export default function OnboardingScreen() {
 
       case "goals":
         return (
-          <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>What's your goal?</Text>
-            <Text style={styles.stepSubtitle}>
+          <View style={selection.stepContent}>
+            <Text style={selection.stepTitle}>What's your goal?</Text>
+            <Text style={selection.stepSubtitle}>
               This helps us recommend the right programs for you
             </Text>
-            <View style={styles.optionsList}>
+            <View style={selection.optionsList}>
               {GOALS.map((goal) => (
                 <Pressable
                   key={goal.id}
                   style={[
-                    styles.optionCard,
-                    selectedGoal === goal.id && styles.optionCardSelected,
+                    selection.optionCard,
+                    selectedGoal === goal.id && selection.optionCardSelected,
                   ]}
                   onPress={() => setSelectedGoal(goal.id)}
                 >
                   <goal.icon
                     size={24}
-                    color={
-                      selectedGoal === goal.id
-                        ? colors.emerald500
-                        : colors.zinc400
-                    }
+                    color={selectedGoal === goal.id ? colors.emerald500 : colors.zinc400}
                   />
                   <Text
                     style={[
-                      styles.optionLabel,
-                      selectedGoal === goal.id && styles.optionLabelSelected,
+                      selection.optionLabel,
+                      selectedGoal === goal.id && selection.optionLabelSelected,
                     ]}
                   >
                     {goal.label}
                   </Text>
                   {selectedGoal === goal.id && (
-                    <View style={styles.checkCircle}>
+                    <View style={selection.checkCircle}>
                       <Check size={14} color={colors.black} />
                     </View>
                   )}
@@ -218,37 +195,34 @@ export default function OnboardingScreen() {
 
       case "experience":
         return (
-          <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Experience Level</Text>
-            <Text style={styles.stepSubtitle}>
+          <View style={selection.stepContent}>
+            <Text style={selection.stepTitle}>Experience Level</Text>
+            <Text style={selection.stepSubtitle}>
               How long have you been training?
             </Text>
-            <View style={styles.optionsList}>
+            <View style={selection.optionsList}>
               {EXPERIENCE.map((exp) => (
                 <Pressable
                   key={exp.id}
                   style={[
-                    styles.optionCard,
-                    selectedExperience === exp.id && styles.optionCardSelected,
+                    selection.optionCard,
+                    selectedExperience === exp.id && selection.optionCardSelected,
                   ]}
                   onPress={() => setSelectedExperience(exp.id)}
                 >
-                  <View style={styles.optionTextContainer}>
+                  <View style={selection.optionTextContainer}>
                     <Text
                       style={[
-                        styles.optionLabel,
-                        selectedExperience === exp.id &&
-                          styles.optionLabelSelected,
+                        selection.optionLabel,
+                        selectedExperience === exp.id && selection.optionLabelSelected,
                       ]}
                     >
                       {exp.label}
                     </Text>
-                    <Text style={styles.optionDescription}>
-                      {exp.description}
-                    </Text>
+                    <Text style={selection.optionDescription}>{exp.description}</Text>
                   </View>
                   {selectedExperience === exp.id && (
-                    <View style={styles.checkCircle}>
+                    <View style={selection.checkCircle}>
                       <Check size={14} color={colors.black} />
                     </View>
                   )}
@@ -260,37 +234,34 @@ export default function OnboardingScreen() {
 
       case "equipment":
         return (
-          <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Available Equipment</Text>
-            <Text style={styles.stepSubtitle}>
+          <View style={selection.stepContent}>
+            <Text style={selection.stepTitle}>Available Equipment</Text>
+            <Text style={selection.stepSubtitle}>
               What equipment do you have access to?
             </Text>
-            <View style={styles.optionsList}>
+            <View style={selection.optionsList}>
               {EQUIPMENT.map((eq) => (
                 <Pressable
                   key={eq.id}
                   style={[
-                    styles.optionCard,
-                    selectedEquipment === eq.id && styles.optionCardSelected,
+                    selection.optionCard,
+                    selectedEquipment === eq.id && selection.optionCardSelected,
                   ]}
                   onPress={() => setSelectedEquipment(eq.id)}
                 >
-                  <View style={styles.optionTextContainer}>
+                  <View style={selection.optionTextContainer}>
                     <Text
                       style={[
-                        styles.optionLabel,
-                        selectedEquipment === eq.id &&
-                          styles.optionLabelSelected,
+                        selection.optionLabel,
+                        selectedEquipment === eq.id && selection.optionLabelSelected,
                       ]}
                     >
                       {eq.label}
                     </Text>
-                    <Text style={styles.optionDescription}>
-                      {eq.description}
-                    </Text>
+                    <Text style={selection.optionDescription}>{eq.description}</Text>
                   </View>
                   {selectedEquipment === eq.id && (
-                    <View style={styles.checkCircle}>
+                    <View style={selection.checkCircle}>
                       <Check size={14} color={colors.black} />
                     </View>
                   )}
@@ -302,37 +273,34 @@ export default function OnboardingScreen() {
 
       case "schedule":
         return (
-          <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Training Schedule</Text>
-            <Text style={styles.stepSubtitle}>
+          <View style={selection.stepContent}>
+            <Text style={selection.stepTitle}>Training Schedule</Text>
+            <Text style={selection.stepSubtitle}>
               How many days per week can you train?
             </Text>
-            <View style={styles.optionsList}>
+            <View style={selection.optionsList}>
               {SCHEDULE.map((sched) => (
                 <Pressable
                   key={sched.id}
                   style={[
-                    styles.optionCard,
-                    selectedSchedule === sched.id && styles.optionCardSelected,
+                    selection.optionCard,
+                    selectedSchedule === sched.id && selection.optionCardSelected,
                   ]}
                   onPress={() => setSelectedSchedule(sched.id)}
                 >
-                  <View style={styles.optionTextContainer}>
+                  <View style={selection.optionTextContainer}>
                     <Text
                       style={[
-                        styles.optionLabel,
-                        selectedSchedule === sched.id &&
-                          styles.optionLabelSelected,
+                        selection.optionLabel,
+                        selectedSchedule === sched.id && selection.optionLabelSelected,
                       ]}
                     >
                       {sched.label}
                     </Text>
-                    <Text style={styles.optionDescription}>
-                      {sched.description}
-                    </Text>
+                    <Text style={selection.optionDescription}>{sched.description}</Text>
                   </View>
                   {selectedSchedule === sched.id && (
-                    <View style={styles.checkCircle}>
+                    <View style={selection.checkCircle}>
                       <Check size={14} color={colors.black} />
                     </View>
                   )}
@@ -344,37 +312,36 @@ export default function OnboardingScreen() {
 
       case "complete":
         return (
-          <View style={styles.stepContent}>
-            <View style={styles.successIcon}>
+          <View style={selection.stepContent}>
+            <View style={success.iconContainer}>
               <Check size={48} color={colors.black} />
             </View>
-            <Text style={styles.completeTitle}>You're all set!</Text>
-            <Text style={styles.completeSubtitle}>
-              Based on your preferences, we've found the perfect programs for
-              you.
+            <Text style={success.title}>You're all set!</Text>
+            <Text style={success.subtitle}>
+              Based on your preferences, we've found the perfect programs for you.
             </Text>
-            <View style={styles.summaryCard}>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Goal</Text>
-                <Text style={styles.summaryValue}>
+            <View style={selection.summaryCard}>
+              <View style={selection.summaryItem}>
+                <Text style={selection.summaryLabel}>Goal</Text>
+                <Text style={selection.summaryValue}>
                   {GOALS.find((g) => g.id === selectedGoal)?.label}
                 </Text>
               </View>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Experience</Text>
-                <Text style={styles.summaryValue}>
+              <View style={selection.summaryItem}>
+                <Text style={selection.summaryLabel}>Experience</Text>
+                <Text style={selection.summaryValue}>
                   {EXPERIENCE.find((e) => e.id === selectedExperience)?.label}
                 </Text>
               </View>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Equipment</Text>
-                <Text style={styles.summaryValue}>
+              <View style={selection.summaryItem}>
+                <Text style={selection.summaryLabel}>Equipment</Text>
+                <Text style={selection.summaryValue}>
                   {EQUIPMENT.find((e) => e.id === selectedEquipment)?.label}
                 </Text>
               </View>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Schedule</Text>
-                <Text style={styles.summaryValue}>
+              <View style={selection.summaryItem}>
+                <Text style={selection.summaryLabel}>Schedule</Text>
+                <Text style={selection.summaryValue}>
                   {SCHEDULE.find((s) => s.id === selectedSchedule)?.label}
                 </Text>
               </View>
@@ -385,16 +352,16 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={[layout.container, styles.container]} edges={["top", "bottom"]}>
       {/* Progress Indicator */}
       {currentStep !== "welcome" && (
-        <View style={styles.progressContainer}>
+        <View style={selection.progressContainer}>
           {STEPS.slice(1, -1).map((step, index) => (
             <View
               key={step}
               style={[
-                styles.progressDot,
-                STEPS.indexOf(step) <= currentIndex && styles.progressDotActive,
+                selection.progressDot,
+                STEPS.indexOf(step) <= currentIndex && selection.progressDotActive,
               ]}
             />
           ))}
@@ -405,29 +372,25 @@ export default function OnboardingScreen() {
       {renderStepContent()}
 
       {/* Navigation */}
-      <View style={styles.navigation}>
+      <View style={selection.navigation}>
         {!isFirstStep && !isLastStep ? (
-          <Pressable style={styles.backButton} onPress={handleBack}>
+          <Pressable style={selection.backButton} onPress={handleBack}>
             <ChevronLeft size={24} color={colors.white} />
           </Pressable>
         ) : (
-          <View style={styles.backButtonPlaceholder} />
+          <View style={selection.backButtonPlaceholder} />
         )}
 
         <Pressable
           style={[
-            styles.nextButton,
-            (!canProceed() || isSaving) && styles.nextButtonDisabled,
+            selection.nextButton,
+            (!canProceed() || isSaving) && selection.nextButtonDisabled,
           ]}
           onPress={handleNext}
           disabled={!canProceed() || isSaving}
         >
-          <Text style={styles.nextButtonText}>
-            {isSaving
-              ? "Saving..."
-              : isLastStep
-              ? "Get Started"
-              : "Continue"}
+          <Text style={selection.nextButtonText}>
+            {isSaving ? "Saving..." : isLastStep ? "Get Started" : "Continue"}
           </Text>
           {!isLastStep && !isSaving && (
             <ChevronRight size={20} color={colors.black} />
@@ -440,28 +403,7 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: colors.black,
     paddingHorizontal: spacing.md,
-  },
-  progressContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-  },
-  progressDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.zinc800,
-  },
-  progressDotActive: {
-    backgroundColor: colors.emerald500,
-  },
-  stepContent: {
-    flex: 1,
-    justifyContent: "center",
   },
   logoContainer: {
     alignItems: "center",
@@ -491,139 +433,5 @@ const styles = StyleSheet.create({
     color: colors.zinc400,
     textAlign: "center",
     lineHeight: 24,
-  },
-  stepTitle: {
-    fontSize: fontSize["2xl"],
-    fontWeight: fontWeight.bold,
-    color: colors.white,
-    marginBottom: spacing.sm,
-  },
-  stepSubtitle: {
-    fontSize: fontSize.base,
-    color: colors.zinc400,
-    marginBottom: spacing.xl,
-  },
-  optionsList: {
-    gap: spacing.md,
-  },
-  optionCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.zinc900,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-    gap: spacing.md,
-  },
-  optionCardSelected: {
-    borderColor: colors.emerald500,
-    backgroundColor: colors.emeraldAlpha10,
-  },
-  optionTextContainer: {
-    flex: 1,
-  },
-  optionLabel: {
-    flex: 1,
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.medium,
-    color: colors.white,
-  },
-  optionLabelSelected: {
-    color: colors.emerald500,
-  },
-  optionDescription: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
-    marginTop: 2,
-  },
-  checkCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.emerald500,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  successIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: colors.emerald500,
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",
-    marginBottom: spacing.lg,
-  },
-  completeTitle: {
-    fontSize: fontSize["3xl"],
-    fontWeight: fontWeight.bold,
-    color: colors.white,
-    textAlign: "center",
-    marginBottom: spacing.sm,
-  },
-  completeSubtitle: {
-    fontSize: fontSize.base,
-    color: colors.zinc400,
-    textAlign: "center",
-    marginBottom: spacing.xl,
-  },
-  summaryCard: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-    gap: spacing.md,
-  },
-  summaryItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  summaryLabel: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
-  },
-  summaryValue: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.medium,
-    color: colors.white,
-  },
-  navigation: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: spacing.lg,
-    gap: spacing.md,
-  },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.zinc900,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backButtonPlaceholder: {
-    width: 48,
-  },
-  nextButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.emerald500,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    gap: spacing.xs,
-  },
-  nextButtonDisabled: {
-    backgroundColor: colors.zinc800,
-  },
-  nextButtonText: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-    color: colors.black,
   },
 });

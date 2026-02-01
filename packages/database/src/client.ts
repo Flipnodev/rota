@@ -1,7 +1,7 @@
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseClient, SupabaseClient as BaseSupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-export type SupabaseClient = ReturnType<typeof createClient>;
+export type SupabaseClient = BaseSupabaseClient<Database>;
 
 /**
  * Create a typed Supabase client

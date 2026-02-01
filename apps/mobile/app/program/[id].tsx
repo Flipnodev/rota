@@ -12,6 +12,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
+import { layout, header as headerStyles, typography, card, button } from "@/constants/styles";
 import {
   ChevronLeft,
   Calendar,
@@ -27,26 +28,20 @@ import { useProgram } from "@/hooks/use-program";
 import { useActiveProgram } from "@/hooks/use-active-program";
 import { useAuth } from "@/providers/auth-provider";
 
-// Helper to format difficulty level
 function formatDifficulty(level: string): string {
   return level.charAt(0).toUpperCase() + level.slice(1);
 }
 
-// Helper to format program goal
 function formatGoal(goal: string): string {
   return goal.charAt(0).toUpperCase() + goal.slice(1);
 }
 
-// Helper to get day label (sequential: Day 1, Day 2, etc.)
 function getDayLabel(dayNumber: number): string {
   return `Day ${dayNumber}`;
 }
 
-// Helper to calculate which program day the user is on (1-based)
 function getCurrentProgramDay(startedAt: Date | null): number {
-  if (!startedAt) {
-    return 1; // Show Day 1 workouts if not started
-  }
+  if (!startedAt) return 1;
 
   const now = new Date();
   const startDate = new Date(startedAt.getFullYear(), startedAt.getMonth(), startedAt.getDate());
@@ -55,7 +50,7 @@ function getCurrentProgramDay(startedAt: Date | null): number {
   const msPerDay = 24 * 60 * 60 * 1000;
   const daysElapsed = Math.floor((today.getTime() - startDate.getTime()) / msPerDay);
 
-  return daysElapsed + 1; // Day 1 on start day, Day 2 on next day, etc.
+  return daysElapsed + 1;
 }
 
 export default function ProgramDetailScreen() {
@@ -81,31 +76,23 @@ export default function ProgramDetailScreen() {
   const { startProgram } = useActiveProgram();
   const [isSelectingProgram, setIsSelectingProgram] = useState(false);
 
-  // Check if this is a template program vs user's own program
   const isTemplate = program?.is_template === true;
   const isOwnProgram = program?.user_id != null && program?.user_id === user?.id;
   const needsToSelectProgram = isTemplate && !hasStartedProgram;
 
-  // Get week 1 workouts for display (sorted by day_of_week)
   const week1Workouts = (program?.workouts?.filter((w) => w.week_number === 1) || [])
     .sort((a, b) => a.day_of_week - b.day_of_week);
 
-  // Calculate current program day using sequential logic
   const daysPerWeek = program?.days_per_week || 1;
   const currentProgramDay = getCurrentProgramDay(programStartedAt);
-
-  // Convert program day to day within week (1 to daysPerWeek)
   const dayInWeek = ((currentProgramDay - 1) % daysPerWeek) + 1;
 
-  // Find today's workout(s) based on sequential day
-  // day_of_week in the database represents Day 1, Day 2, etc. of the week
   const todaysWorkouts = week1Workouts.filter((w) => w.day_of_week === dayInWeek);
   const allTodaysWorkoutsCompleted = todaysWorkouts.length > 0 &&
     todaysWorkouts.every((w) => todayCompletedWorkoutIds.includes(w.id));
   const nextIncompleteWorkout = todaysWorkouts.find((w) => !todayCompletedWorkoutIds.includes(w.id));
   const hasWorkoutsToday = todaysWorkouts.length > 0;
 
-  // Track expanded workout detail cards
   const [expandedWorkoutIds, setExpandedWorkoutIds] = useState<Set<string>>(new Set());
 
   const toggleWorkoutExpanded = useCallback((workoutId: string) => {
@@ -120,23 +107,21 @@ export default function ProgramDetailScreen() {
     });
   }, []);
 
-  // Handle tapping a workout in the schedule (only for workouts that can be started)
   const handleWorkoutPress = useCallback(
     (workoutId: string) => {
-      // Navigate to workout - pass templateProgramId if this is a template
+      const needsActivation = !hasStartedProgram;
       router.push({
         pathname: "/workout/active",
         params: {
           workoutId,
           programId: id,
-          ...(isTemplate && !isOwnProgram ? { templateProgramId: program?.id } : {}),
+          ...(needsActivation ? { templateProgramId: program?.id } : {}),
         },
       });
     },
-    [router, id, isTemplate, isOwnProgram, program?.id]
+    [router, id, hasStartedProgram, program?.id]
   );
 
-  // Handle selecting a program (without starting workout)
   const handleSelectProgram = useCallback(async () => {
     if (!program?.id) return;
 
@@ -145,16 +130,12 @@ export default function ProgramDetailScreen() {
       const result = await startProgram(program.id);
       if (result.success) {
         await refetch();
-        // Ask if user wants to start workout now
         if (nextIncompleteWorkout) {
           Alert.alert(
             "Program Selected",
             "Would you like to start your first workout now?",
             [
-              {
-                text: "Later",
-                style: "cancel",
-              },
+              { text: "Later", style: "cancel" },
               {
                 text: "Start Now",
                 onPress: () => {
@@ -180,34 +161,33 @@ export default function ProgramDetailScreen() {
     }
   }, [program?.id, startProgram, refetch, nextIncompleteWorkout, router]);
 
-  // Handle "Start Today's Workout" button (when program is already selected)
   const handleStartTodaysWorkout = useCallback(() => {
-    if (!nextIncompleteWorkout) {
-      return;
-    }
+    if (!nextIncompleteWorkout) return;
 
+    const needsActivation = !hasStartedProgram;
     router.push({
       pathname: "/workout/active",
       params: {
         workoutId: nextIncompleteWorkout.id,
         programId: id,
+        ...(needsActivation ? { templateProgramId: program?.id } : {}),
       },
     });
-  }, [nextIncompleteWorkout, router, id]);
+  }, [nextIncompleteWorkout, router, id, hasStartedProgram, program?.id]);
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
+      <SafeAreaView style={layout.container} edges={["top"]}>
+        <View style={headerStyles.containerRow}>
+          <Pressable style={headerStyles.backButton} onPress={() => router.back()}>
             <ChevronLeft size={24} color={colors.white} />
           </Pressable>
-          <Text style={styles.headerTitle}>Program Details</Text>
-          <View style={styles.headerSpacer} />
+          <Text style={typography.sectionTitle}>Program Details</Text>
+          <View style={headerStyles.placeholder} />
         </View>
-        <View style={styles.loadingContainer}>
+        <View style={layout.centered}>
           <ActivityIndicator size="large" color={colors.emerald500} />
-          <Text style={styles.loadingText}>Loading program...</Text>
+          <Text style={[typography.bodySm, { marginTop: spacing.md }]}>Loading program...</Text>
         </View>
       </SafeAreaView>
     );
@@ -215,15 +195,15 @@ export default function ProgramDetailScreen() {
 
   if (error || !program) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
+      <SafeAreaView style={layout.container} edges={["top"]}>
+        <View style={headerStyles.containerRow}>
+          <Pressable style={headerStyles.backButton} onPress={() => router.back()}>
             <ChevronLeft size={24} color={colors.white} />
           </Pressable>
-          <Text style={styles.headerTitle}>Program Details</Text>
-          <View style={styles.headerSpacer} />
+          <Text style={typography.sectionTitle}>Program Details</Text>
+          <View style={headerStyles.placeholder} />
         </View>
-        <View style={styles.errorContainer}>
+        <View style={layout.centered}>
           <Text style={styles.errorText}>
             {error?.message || "Program not found"}
           </Text>
@@ -236,19 +216,19 @@ export default function ProgramDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={layout.container} edges={["top"]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
+      <View style={headerStyles.containerRow}>
+        <Pressable style={headerStyles.backButton} onPress={() => router.back()}>
           <ChevronLeft size={24} color={colors.white} />
         </Pressable>
-        <Text style={styles.headerTitle}>Program Details</Text>
-        <View style={styles.headerSpacer} />
+        <Text style={typography.sectionTitle}>Program Details</Text>
+        <View style={headerStyles.placeholder} />
       </View>
 
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={layout.scroll} showsVerticalScrollIndicator={false}>
         {/* Program Info */}
-        <View style={styles.programCard}>
+        <View style={card.large}>
           <Text style={styles.programName}>{program.name}</Text>
           <Text style={styles.programDescription}>
             {program.description || "No description available."}
@@ -258,19 +238,19 @@ export default function ProgramDetailScreen() {
             <View style={styles.metaItem}>
               <Calendar size={18} color={colors.emerald500} />
               <Text style={styles.metaValue}>{program.duration_weeks} weeks</Text>
-              <Text style={styles.metaLabel}>Duration</Text>
+              <Text style={typography.caption}>Duration</Text>
             </View>
             <View style={styles.metaItem}>
               <Target size={18} color={colors.emerald500} />
               <Text style={styles.metaValue}>{program.days_per_week}</Text>
-              <Text style={styles.metaLabel}>Days/Week</Text>
+              <Text style={typography.caption}>Days/Week</Text>
             </View>
             <View style={styles.metaItem}>
               <Clock size={18} color={colors.emerald500} />
               <Text style={styles.metaValue}>
                 {formatDifficulty(program.difficulty)}
               </Text>
-              <Text style={styles.metaLabel}>Level</Text>
+              <Text style={typography.caption}>Level</Text>
             </View>
           </View>
 
@@ -283,31 +263,71 @@ export default function ProgramDetailScreen() {
             </View>
           </View>
 
-          {/* Progress - only show for user's own programs */}
+          {/* Progress */}
           {isOwnProgram && (
             <View style={styles.progressContainer}>
-              <View style={styles.progressHeader}>
-                <Text style={styles.progressLabel}>
+              <View style={layout.rowSpaced}>
+                <Text style={typography.bodySm}>
                   Week {currentWeek} of {program.duration_weeks}
                 </Text>
-                <Text style={styles.progressLabel}>
+                <Text style={typography.bodySm}>
                   {completedWorkouts}/{totalWorkouts} workouts
                 </Text>
               </View>
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: `${progress}%` }]} />
               </View>
-              <Text style={styles.progressText}>{progress}% complete</Text>
+              <Text style={typography.caption}>{progress}% complete</Text>
             </View>
           )}
         </View>
 
+        {/* Action Button */}
+        {needsToSelectProgram ? (
+          <Pressable
+            style={[button.primary, styles.actionButton, isSelectingProgram && button.disabled]}
+            onPress={handleSelectProgram}
+            disabled={isSelectingProgram}
+          >
+            {isSelectingProgram ? (
+              <ActivityIndicator size="small" color={colors.black} />
+            ) : (
+              <Play size={20} color={colors.black} />
+            )}
+            <Text style={button.primaryText}>
+              {isSelectingProgram ? "Selecting..." : "Start Program"}
+            </Text>
+          </Pressable>
+        ) : nextIncompleteWorkout ? (
+          <Pressable
+            style={[button.primary, styles.actionButton]}
+            onPress={handleStartTodaysWorkout}
+          >
+            <Play size={20} color={colors.black} />
+            <Text style={button.primaryText}>Start Today's Workout</Text>
+          </Pressable>
+        ) : allTodaysWorkoutsCompleted ? (
+          <View style={[card.info, styles.actionButton]}>
+            <Check size={20} color={colors.emerald500} />
+            <Text style={styles.completedMessageText}>
+              {todaysWorkouts.length > 1
+                ? "All workouts complete! Rest up for tomorrow."
+                : "Today's workout complete! Rest up for tomorrow."}
+            </Text>
+          </View>
+        ) : week1Workouts.length > 0 && !hasWorkoutsToday ? (
+          <View style={[card.base, styles.actionButton]}>
+            <Text style={typography.bodySm}>
+              No workout scheduled for today. Check back on your next workout day!
+            </Text>
+          </View>
+        ) : null}
+
         {/* Weekly Schedule */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Weekly Schedule</Text>
+          <Text style={typography.sectionTitle}>Weekly Schedule</Text>
           {week1Workouts.length > 0 ? (
             week1Workouts.map((workout) => {
-              // Check if this workout is for today's program day
               const isToday = workout.day_of_week === dayInWeek;
               const exerciseCount = workout.workout_exercises?.length || 0;
               const isCompletedToday = todayCompletedWorkoutIds.includes(workout.id);
@@ -325,7 +345,6 @@ export default function ProgramDetailScreen() {
                   onPress={canStart ? () => handleWorkoutPress(workout.id) : undefined}
                   disabled={!canStart}
                 >
-                  {/* Status indicator */}
                   <View style={[
                     styles.statusIndicator,
                     isCompletedToday && styles.statusIndicatorDone,
@@ -364,7 +383,7 @@ export default function ProgramDetailScreen() {
                       styles.scheduleWorkout,
                       !canStart && styles.scheduleWorkoutLocked,
                     ]}>{workout.name}</Text>
-                    <Text style={styles.exerciseCount}>
+                    <Text style={typography.caption}>
                       {exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""}
                     </Text>
                   </View>
@@ -379,18 +398,18 @@ export default function ProgramDetailScreen() {
               );
             })
           ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>
+            <View style={[card.base, { alignItems: "center" }]}>
+              <Text style={typography.bodySm}>
                 No workouts defined for this program.
               </Text>
             </View>
           )}
         </View>
 
-        {/* Workout Details - Collapsible */}
+        {/* Workout Details */}
         {week1Workouts.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Workout Details</Text>
+            <Text style={typography.sectionTitle}>Workout Details</Text>
             {week1Workouts.map((workout) => {
               const isExpanded = expandedWorkoutIds.has(workout.id);
               const exerciseCount = workout.workout_exercises?.length || 0;
@@ -404,7 +423,7 @@ export default function ProgramDetailScreen() {
                     <Dumbbell size={18} color={colors.emerald500} />
                     <View style={styles.workoutDetailHeaderInfo}>
                       <Text style={styles.workoutDetailName}>{workout.name}</Text>
-                      <Text style={styles.workoutDetailMeta}>
+                      <Text style={typography.caption}>
                         {exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""}
                       </Text>
                     </View>
@@ -418,8 +437,7 @@ export default function ProgramDetailScreen() {
 
                   {isExpanded && (
                     <>
-                      {workout.workout_exercises &&
-                      workout.workout_exercises.length > 0 ? (
+                      {workout.workout_exercises && workout.workout_exercises.length > 0 ? (
                         <View style={styles.exerciseList}>
                           {workout.workout_exercises.map((we, index) => (
                             <View key={we.id} style={styles.exerciseItem}>
@@ -428,7 +446,7 @@ export default function ProgramDetailScreen() {
                                 <Text style={styles.exerciseName}>
                                   {we.exercise?.name || "Unknown Exercise"}
                                 </Text>
-                                <Text style={styles.exerciseSets}>
+                                <Text style={typography.caption}>
                                   {we.sets?.length || 0} sets
                                 </Text>
                               </View>
@@ -448,51 +466,6 @@ export default function ProgramDetailScreen() {
           </View>
         )}
 
-        {/* Start Button */}
-        {needsToSelectProgram ? (
-          // Program not selected yet - show "Start Program" button
-          <Pressable
-            style={[styles.startButton, isSelectingProgram && styles.startButtonDisabled]}
-            onPress={handleSelectProgram}
-            disabled={isSelectingProgram}
-          >
-            {isSelectingProgram ? (
-              <ActivityIndicator size="small" color={colors.black} />
-            ) : (
-              <Play size={20} color={colors.black} />
-            )}
-            <Text style={styles.startButtonText}>
-              {isSelectingProgram ? "Selecting..." : "Start Program"}
-            </Text>
-          </Pressable>
-        ) : nextIncompleteWorkout ? (
-          // Program selected, there's a workout available
-          <Pressable
-            style={styles.startButton}
-            onPress={handleStartTodaysWorkout}
-          >
-            <Play size={20} color={colors.black} />
-            <Text style={styles.startButtonText}>Start Today's Workout</Text>
-          </Pressable>
-        ) : allTodaysWorkoutsCompleted ? (
-          // All of today's workouts are done
-          <View style={styles.completedMessage}>
-            <Check size={20} color={colors.emerald500} />
-            <Text style={styles.completedMessageText}>
-              {todaysWorkouts.length > 1
-                ? "All workouts complete! Rest up for tomorrow."
-                : "Today's workout complete! Rest up for tomorrow."}
-            </Text>
-          </View>
-        ) : week1Workouts.length > 0 && !hasWorkoutsToday ? (
-          // No workout scheduled for today
-          <View style={styles.noTodayWorkout}>
-            <Text style={styles.noTodayWorkoutText}>
-              No workout scheduled for today. Check back on your next workout day!
-            </Text>
-          </View>
-        ) : null}
-
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
@@ -500,50 +473,6 @@ export default function ProgramDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.black,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.zinc900,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.white,
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.md,
-  },
-  loadingText: {
-    fontSize: fontSize.base,
-    color: colors.zinc400,
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
-  },
   errorText: {
     fontSize: fontSize.base,
     color: colors.error,
@@ -554,22 +483,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     backgroundColor: colors.zinc900,
     borderRadius: radius.md,
+    marginTop: spacing.md,
   },
   retryButtonText: {
     fontSize: fontSize.base,
     color: colors.white,
     fontWeight: fontWeight.medium,
-  },
-  scroll: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  programCard: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
   },
   programName: {
     fontSize: fontSize["2xl"],
@@ -599,11 +518,6 @@ const styles = StyleSheet.create({
     color: colors.white,
     marginTop: spacing.xs,
   },
-  metaLabel: {
-    fontSize: fontSize.xs,
-    color: colors.zinc500,
-    marginTop: 2,
-  },
   goalContainer: {
     marginTop: spacing.md,
     paddingTop: spacing.md,
@@ -628,38 +542,31 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.zinc800,
   },
-  progressHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm,
-  },
-  progressLabel: {
-    fontSize: fontSize.sm,
-    color: colors.zinc400,
-  },
   progressBar: {
     height: 4,
     backgroundColor: colors.zinc800,
     borderRadius: radius.full,
-    marginBottom: spacing.xs,
+    marginVertical: spacing.sm,
   },
   progressFill: {
     height: "100%",
     backgroundColor: colors.emerald500,
     borderRadius: radius.full,
   },
-  progressText: {
-    fontSize: fontSize.xs,
-    color: colors.zinc500,
-  },
   section: {
     marginTop: spacing.xl,
   },
-  sectionTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.white,
-    marginBottom: spacing.md,
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  completedMessageText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    color: colors.emerald500,
   },
   scheduleItem: {
     flexDirection: "row",
@@ -755,23 +662,6 @@ const styles = StyleSheet.create({
   scheduleWorkoutLocked: {
     color: colors.zinc500,
   },
-  exerciseCount: {
-    fontSize: fontSize.xs,
-    color: colors.zinc500,
-    marginTop: 2,
-  },
-  emptyState: {
-    backgroundColor: colors.zinc900,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-  },
-  emptyStateText: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
-  },
   workoutDetailCard: {
     backgroundColor: colors.zinc900,
     borderRadius: radius.lg,
@@ -793,11 +683,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
     color: colors.white,
-  },
-  workoutDetailMeta: {
-    fontSize: fontSize.xs,
-    color: colors.zinc500,
-    marginTop: 2,
   },
   expandIcon: {
     transform: [{ rotate: "0deg" }],
@@ -837,10 +722,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.white,
   },
-  exerciseSets: {
-    fontSize: fontSize.xs,
-    color: colors.zinc500,
-  },
   noExercisesText: {
     fontSize: fontSize.sm,
     color: colors.zinc500,
@@ -850,55 +731,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.zinc800,
     paddingTop: spacing.sm,
-  },
-  startButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.emerald500,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    gap: spacing.sm,
-    marginTop: spacing.xl,
-  },
-  startButtonDisabled: {
-    opacity: 0.7,
-  },
-  startButtonText: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-    color: colors.black,
-  },
-  completedMessage: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.emeraldAlpha10,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.lg,
-    gap: spacing.sm,
-    marginTop: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.emerald500,
-  },
-  completedMessageText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.emerald500,
-  },
-  noTodayWorkout: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginTop: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-  },
-  noTodayWorkoutText: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
-    textAlign: "center",
   },
   bottomSpacer: {
     height: spacing.xl,

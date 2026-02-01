@@ -124,15 +124,17 @@ export function useProgram(programId: string | null): UseProgramReturn {
         const programWorkouts = data.workouts || [];
         const workoutIds = programWorkouts.map((w: Workout) => w.id);
 
-        // Check if user has started this program (either template or their own)
+        // Check if user has started this program (has an active entry in user_programs)
         const { data: userProgramEntry } = await supabase
           .from("user_programs")
-          .select("id, started_at")
+          .select("id, started_at, status")
           .eq("user_id", user.id)
           .eq("program_id", programId)
+          .eq("status", "active")
           .maybeSingle();
 
-        const userHasStarted = !!userProgramEntry || !data.is_template;
+        // Program is "started" only if there's an active entry in user_programs
+        const userHasStarted = !!userProgramEntry;
         setHasStartedProgram(userHasStarted);
         setProgramStartedAt(userProgramEntry?.started_at ? new Date(userProgramEntry.started_at) : null);
 

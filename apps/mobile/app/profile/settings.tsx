@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
+import { layout, header as headerStyles, typography, card, section as sectionStyles, listItem } from "@/constants/styles";
 import { ChevronLeft, ChevronRight, Trash } from "@/components/icons";
 import { useSettings, type AppSettings } from "@/hooks/use-settings";
 import { useActiveProgram } from "@/hooks/use-active-program";
@@ -95,8 +96,8 @@ export default function SettingsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.loadingContainer}>
+      <SafeAreaView style={layout.container} edges={["top"]}>
+        <View style={layout.centered}>
           <ActivityIndicator size="large" color={colors.emerald500} />
         </View>
       </SafeAreaView>
@@ -104,34 +105,32 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={layout.container} edges={["top"]}>
+      <ScrollView style={layout.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <View style={headerStyles.containerRow}>
+          <Pressable style={headerStyles.backButton} onPress={() => router.back()}>
             <ChevronLeft size={24} color={colors.white} />
           </Pressable>
-          <Text style={styles.title}>Settings</Text>
-          <View style={styles.backButtonPlaceholder} />
+          <Text style={typography.screenTitle}>Settings</Text>
+          <View style={headerStyles.placeholder} />
         </View>
 
         {/* Notifications Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
+        <View style={sectionStyles.container}>
+          <Text style={sectionStyles.title}>Notifications</Text>
           <View style={styles.settingsCard}>
             {notificationSettings.map((setting, index) => (
               <View
                 key={setting.id}
                 style={[
-                  styles.settingItem,
-                  index < notificationSettings.length - 1 && styles.settingItemBorder,
+                  listItem.base,
+                  index < notificationSettings.length - 1 && listItem.bordered,
                 ]}
               >
-                <View style={styles.settingContent}>
-                  <Text style={styles.settingLabel}>{setting.label}</Text>
-                  <Text style={styles.settingDescription}>
-                    {setting.description}
-                  </Text>
+                <View style={listItem.content}>
+                  <Text style={listItem.title}>{setting.label}</Text>
+                  <Text style={listItem.subtitle}>{setting.description}</Text>
                 </View>
                 <Switch
                   value={settings[setting.id] as boolean}
@@ -145,22 +144,20 @@ export default function SettingsScreen() {
         </View>
 
         {/* App Preferences Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>App Preferences</Text>
+        <View style={sectionStyles.container}>
+          <Text style={sectionStyles.title}>App Preferences</Text>
           <View style={styles.settingsCard}>
             {appSettings.map((setting, index) => (
               <View
                 key={setting.id}
                 style={[
-                  styles.settingItem,
-                  index < appSettings.length - 1 && styles.settingItemBorder,
+                  listItem.base,
+                  index < appSettings.length - 1 && listItem.bordered,
                 ]}
               >
-                <View style={styles.settingContent}>
-                  <Text style={styles.settingLabel}>{setting.label}</Text>
-                  <Text style={styles.settingDescription}>
-                    {setting.description}
-                  </Text>
+                <View style={listItem.content}>
+                  <Text style={listItem.title}>{setting.label}</Text>
+                  <Text style={listItem.subtitle}>{setting.description}</Text>
                 </View>
                 <Switch
                   value={settings[setting.id] as boolean}
@@ -174,13 +171,13 @@ export default function SettingsScreen() {
         </View>
 
         {/* Units Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Units</Text>
+        <View style={sectionStyles.container}>
+          <Text style={sectionStyles.title}>Units</Text>
           <View style={styles.settingsCard}>
-            <View style={styles.settingItem}>
-              <View style={styles.settingContent}>
-                <Text style={styles.settingLabel}>Weight Units</Text>
-                <Text style={styles.settingDescription}>
+            <View style={listItem.base}>
+              <View style={listItem.content}>
+                <Text style={listItem.title}>Weight Units</Text>
+                <Text style={listItem.subtitle}>
                   {settings.useMetric ? "Kilograms (kg)" : "Pounds (lbs)"}
                 </Text>
               </View>
@@ -224,13 +221,13 @@ export default function SettingsScreen() {
 
         {/* Active Program Section */}
         {activeProgram && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Active Program</Text>
+          <View style={sectionStyles.container}>
+            <Text style={sectionStyles.title}>Active Program</Text>
             <View style={styles.settingsCard}>
-              <View style={styles.programItem}>
-                <View style={styles.programInfo}>
-                  <Text style={styles.programName}>{activeProgram.program.name}</Text>
-                  <Text style={styles.programProgress}>
+              <View style={listItem.base}>
+                <View style={listItem.content}>
+                  <Text style={listItem.title}>{activeProgram.program.name}</Text>
+                  <Text style={listItem.subtitle}>
                     {progress}% complete • Week {Math.min(
                       Math.floor(activeProgram.progress.completed_workouts / activeProgram.program.days_per_week) + 1,
                       activeProgram.program.duration_weeks
@@ -254,22 +251,22 @@ export default function SettingsScreen() {
         )}
 
         {/* About Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
+        <View style={sectionStyles.container}>
+          <Text style={sectionStyles.title}>About</Text>
           <View style={styles.settingsCard}>
-            <Pressable style={styles.linkItem} onPress={handlePrivacyPolicy}>
-              <Text style={styles.linkLabel}>Privacy Policy</Text>
+            <Pressable style={[listItem.base, layout.rowSpaced]} onPress={handlePrivacyPolicy}>
+              <Text style={typography.body}>Privacy Policy</Text>
               <ChevronRight size={20} color={colors.zinc600} />
             </Pressable>
             <View style={styles.divider} />
-            <Pressable style={styles.linkItem} onPress={handleTermsOfService}>
-              <Text style={styles.linkLabel}>Terms of Service</Text>
+            <Pressable style={[listItem.base, layout.rowSpaced]} onPress={handleTermsOfService}>
+              <Text style={typography.body}>Terms of Service</Text>
               <ChevronRight size={20} color={colors.zinc600} />
             </Pressable>
             <View style={styles.divider} />
-            <View style={styles.linkItem}>
-              <Text style={styles.linkLabel}>App Version</Text>
-              <Text style={styles.linkValue}>1.0.0</Text>
+            <View style={[listItem.base, layout.rowSpaced]}>
+              <Text style={typography.body}>App Version</Text>
+              <Text style={typography.bodySm}>1.0.0</Text>
             </View>
           </View>
         </View>
@@ -283,82 +280,14 @@ export default function SettingsScreen() {
   );
 }
 
+// Only screen-specific styles remain
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.black,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scroll: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: spacing.md,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.zinc900,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backButtonPlaceholder: {
-    width: 40,
-  },
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.white,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.zinc500,
-    marginBottom: spacing.sm,
-    marginLeft: spacing.xs,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
   settingsCard: {
     backgroundColor: colors.zinc900,
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.zinc800,
     overflow: "hidden",
-  },
-  settingItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: spacing.md,
-  },
-  settingItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.zinc800,
-  },
-  settingContent: {
-    flex: 1,
-  },
-  settingLabel: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.medium,
-    color: colors.white,
-    marginBottom: 2,
-  },
-  settingDescription: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
   },
   unitToggle: {
     flexDirection: "row",
@@ -382,23 +311,9 @@ const styles = StyleSheet.create({
   unitButtonTextActive: {
     color: colors.black,
   },
-  linkItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: spacing.md,
-  },
   divider: {
     height: 1,
     backgroundColor: colors.zinc800,
-  },
-  linkLabel: {
-    fontSize: fontSize.base,
-    color: colors.white,
-  },
-  linkValue: {
-    fontSize: fontSize.base,
-    color: colors.zinc500,
   },
   footerNote: {
     fontSize: fontSize.xs,
@@ -407,24 +322,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     paddingHorizontal: spacing.md,
     lineHeight: 18,
-  },
-  programItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: spacing.md,
-  },
-  programInfo: {
-    flex: 1,
-  },
-  programName: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.medium,
-    color: colors.white,
-    marginBottom: 2,
-  },
-  programProgress: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
   },
   stopProgramButton: {
     width: 40,

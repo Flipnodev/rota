@@ -11,7 +11,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
+import { layout, header as headerStyles, typography, card, iconContainer } from "@/constants/styles";
 import { ChevronRight, Check, Dumbbell } from "@/components/icons";
+import { EmptyState } from "@/components/ui";
 import { useWorkoutLogs } from "@/hooks/use-workout-logs";
 
 function formatDuration(seconds: number | null): string {
@@ -41,22 +43,20 @@ function formatDate(dateString: string): string {
 function WeeklyChart({ workoutCounts }: { workoutCounts: { day: string; count: number; isToday: boolean }[] }) {
   const maxCount = Math.max(...workoutCounts.map((d) => d.count), 1);
   const containerHeight = 100;
-  const padding = 8; // total vertical padding
+  const padding = 8;
   const gap = 3;
   const availableHeight = containerHeight - padding;
 
-  // Calculate blob height: (available - gaps) / maxCount
   const totalGaps = maxCount > 1 ? (maxCount - 1) * gap : 0;
   const blobHeight = (availableHeight - totalGaps) / maxCount;
 
   return (
-    <View style={styles.chartCard}>
-      <Text style={styles.chartTitle}>This Week</Text>
+    <View style={[card.large, styles.chartCard]}>
+      <Text style={typography.sectionTitle}>This Week</Text>
       <View style={styles.chartContainer}>
         {workoutCounts.map((day, index) => (
           <View key={index} style={styles.chartBar}>
             <View style={styles.barContainer}>
-              {/* Render blobs from bottom to top */}
               {Array.from({ length: day.count }).map((_, blobIndex) => (
                 <View
                   key={blobIndex}
@@ -90,16 +90,16 @@ function WorkoutCard({
   onPress: () => void;
 }) {
   return (
-    <Pressable style={styles.workoutCard} onPress={onPress}>
+    <Pressable style={[card.base, styles.workoutCard]} onPress={onPress}>
       <View style={styles.workoutCardHeader}>
-        <View style={styles.workoutIcon}>
+        <View style={[iconContainer.sm, styles.workoutIcon]}>
           <Check size={16} color={colors.emerald500} />
         </View>
         <View style={styles.workoutContent}>
           <Text style={styles.workoutName}>
             {log.workout?.name || "Workout"}
           </Text>
-          <Text style={styles.workoutMeta}>
+          <Text style={typography.bodySm}>
             {formatDate(log.started_at)} · {formatDuration(log.duration_seconds)}
           </Text>
         </View>
@@ -117,9 +117,8 @@ export default function HistoryScreen() {
   const weeklyData = useMemo(() => {
     const days = ["M", "T", "W", "T", "F", "S", "S"];
     const today = new Date();
-    const todayDayOfWeek = today.getDay(); // 0 = Sunday
+    const todayDayOfWeek = today.getDay();
 
-    // Get start of this week (Monday)
     const startOfWeek = new Date(today);
     const diff = todayDayOfWeek === 0 ? 6 : todayDayOfWeek - 1;
     startOfWeek.setDate(today.getDate() - diff);
@@ -152,8 +151,8 @@ export default function HistoryScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.loadingContainer}>
+      <SafeAreaView style={layout.container} edges={["top"]}>
+        <View style={layout.centered}>
           <ActivityIndicator size="large" color={colors.emerald500} />
         </View>
       </SafeAreaView>
@@ -161,27 +160,27 @@ export default function HistoryScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={layout.container} edges={["top"]}>
+      <ScrollView style={layout.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>History</Text>
-          <Text style={styles.subtitle}>Track your progress over time</Text>
+        <View style={headerStyles.container}>
+          <Text style={typography.pageTitle}>History</Text>
+          <Text style={typography.subtitle}>Track your progress over time</Text>
         </View>
 
         {/* Stats Overview */}
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
+          <View style={[card.base, styles.statCard]}>
             <Text style={styles.statValue}>{stats.thisWeek}</Text>
-            <Text style={styles.statLabel}>This Week</Text>
+            <Text style={typography.caption}>This Week</Text>
           </View>
-          <View style={styles.statCard}>
+          <View style={[card.base, styles.statCard]}>
             <Text style={styles.statValue}>{stats.thisMonth}</Text>
-            <Text style={styles.statLabel}>This Month</Text>
+            <Text style={typography.caption}>This Month</Text>
           </View>
-          <View style={styles.statCard}>
+          <View style={[card.base, styles.statCard]}>
             <Text style={styles.statValue}>{stats.streak}</Text>
-            <Text style={styles.statLabel}>Day Streak</Text>
+            <Text style={typography.caption}>Day Streak</Text>
           </View>
         </View>
 
@@ -190,7 +189,7 @@ export default function HistoryScreen() {
 
         {/* Workout History */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
+          <Text style={typography.sectionTitle}>
             Recent Workouts ({stats.totalWorkouts})
           </Text>
 
@@ -205,15 +204,11 @@ export default function HistoryScreen() {
                 />
               ))
           ) : (
-            <View style={styles.emptyHistory}>
-              <View style={styles.emptyIconContainer}>
-                <Dumbbell size={32} color={colors.zinc500} />
-              </View>
-              <Text style={styles.emptyTitle}>No Workout History</Text>
-              <Text style={styles.emptyText}>
-                Complete your first workout to start tracking your progress
-              </Text>
-            </View>
+            <EmptyState
+              icon={<Dumbbell size={32} color={colors.zinc500} />}
+              title="No Workout History"
+              description="Complete your first workout to start tracking your progress"
+            />
           )}
         </View>
       </ScrollView>
@@ -222,33 +217,6 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.black,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scroll: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  header: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-  },
-  title: {
-    fontSize: fontSize["3xl"],
-    fontWeight: fontWeight.bold,
-    color: colors.white,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: fontSize.base,
-    color: colors.zinc400,
-  },
   statsGrid: {
     flexDirection: "row",
     gap: spacing.sm,
@@ -256,36 +224,14 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.lg,
-    padding: spacing.md,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.zinc800,
   },
   statValue: {
     fontSize: fontSize["2xl"],
     fontWeight: fontWeight.bold,
     color: colors.white,
   },
-  statLabel: {
-    fontSize: fontSize.xs,
-    color: colors.zinc500,
-    marginTop: 2,
-  },
-  // Chart styles
   chartCard: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-    marginBottom: spacing.lg,
-  },
-  chartTitle: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-    color: colors.white,
     marginBottom: spacing.lg,
   },
   chartContainer: {
@@ -293,6 +239,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-end",
     height: 120,
+    marginTop: spacing.lg,
   },
   chartBar: {
     flex: 1,
@@ -325,36 +272,18 @@ const styles = StyleSheet.create({
     color: colors.emerald500,
     fontWeight: fontWeight.semibold,
   },
-  // Section styles
   section: {
     marginBottom: spacing.xl,
   },
-  sectionTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.white,
-    marginBottom: spacing.md,
-  },
-  // Workout card styles
   workoutCard: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.lg,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
+    marginTop: spacing.md,
   },
   workoutCardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    padding: spacing.md,
   },
   workoutIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
     backgroundColor: colors.emeraldAlpha10,
-    alignItems: "center",
-    justifyContent: "center",
     marginRight: spacing.md,
   },
   workoutContent: {
@@ -365,38 +294,5 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
     color: colors.white,
     marginBottom: 2,
-  },
-  workoutMeta: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
-  },
-  // Empty state
-  emptyHistory: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
-    alignItems: "center",
-  },
-  emptyIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.whiteAlpha5,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  emptyTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.white,
-    marginBottom: spacing.sm,
-  },
-  emptyText: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
-    textAlign: "center",
   },
 });

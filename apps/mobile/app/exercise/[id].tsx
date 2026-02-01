@@ -10,11 +10,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 
 import { colors, spacing, fontSize, fontWeight, radius } from "@/constants/theme";
+import { layout, header as headerStyles, typography, card } from "@/constants/styles";
 import { X, TrendingUp, AlertCircle } from "@/components/icons";
 import { useExercise } from "@/hooks/use-exercise";
 import type { MuscleGroup, EquipmentType } from "@rota/database";
 
-// Format muscle group enum to readable text
 function formatMuscleGroup(muscle: MuscleGroup): string {
   const labels: Record<MuscleGroup, string> = {
     chest: "Chest",
@@ -35,7 +35,6 @@ function formatMuscleGroup(muscle: MuscleGroup): string {
   return labels[muscle] || muscle;
 }
 
-// Format equipment enum to readable text
 function formatEquipment(equipment: EquipmentType): string {
   const labels: Record<EquipmentType, string> = {
     barbell: "Barbell",
@@ -52,7 +51,6 @@ function formatEquipment(equipment: EquipmentType): string {
   return labels[equipment] || equipment;
 }
 
-// Format date to relative or absolute
 function formatDate(date: Date): string {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -66,7 +64,6 @@ function formatDate(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// Format full date for personal record
 function formatFullDate(date: Date): string {
   return date.toLocaleDateString("en-US", {
     month: "short",
@@ -75,7 +72,6 @@ function formatFullDate(date: Date): string {
   });
 }
 
-// Format volume (e.g., 2560 -> "2,560 kg")
 function formatVolume(volume: number): string {
   return `${volume.toLocaleString()} kg`;
 }
@@ -85,37 +81,35 @@ export default function ExerciseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { exercise, history, personalRecord, isLoading, error } = useExercise(id);
 
-  // Loading state
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <Pressable style={styles.closeButton} onPress={() => router.back()}>
+      <SafeAreaView style={layout.container} edges={["top"]}>
+        <View style={headerStyles.containerRow}>
+          <Pressable style={headerStyles.backButton} onPress={() => router.back()}>
             <X size={24} color={colors.white} />
           </Pressable>
-          <Text style={styles.headerTitle}>Exercise Info</Text>
-          <View style={styles.headerSpacer} />
+          <Text style={typography.sectionTitle}>Exercise Info</Text>
+          <View style={headerStyles.placeholder} />
         </View>
-        <View style={styles.loadingContainer}>
+        <View style={layout.centered}>
           <ActivityIndicator size="large" color={colors.emerald500} />
-          <Text style={styles.loadingText}>Loading exercise...</Text>
+          <Text style={[typography.bodySm, { marginTop: spacing.md }]}>Loading exercise...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  // Error state
   if (error || !exercise) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <Pressable style={styles.closeButton} onPress={() => router.back()}>
+      <SafeAreaView style={layout.container} edges={["top"]}>
+        <View style={headerStyles.containerRow}>
+          <Pressable style={headerStyles.backButton} onPress={() => router.back()}>
             <X size={24} color={colors.white} />
           </Pressable>
-          <Text style={styles.headerTitle}>Exercise Info</Text>
-          <View style={styles.headerSpacer} />
+          <Text style={typography.sectionTitle}>Exercise Info</Text>
+          <View style={headerStyles.placeholder} />
         </View>
-        <View style={styles.errorContainer}>
+        <View style={layout.centered}>
           <AlertCircle size={48} color={colors.error} />
           <Text style={styles.errorText}>
             {error?.message || "Exercise not found"}
@@ -135,19 +129,19 @@ export default function ExerciseDetailScreen() {
   const hasInstructions = instructions.length > 0;
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={layout.container} edges={["top"]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Pressable style={styles.closeButton} onPress={() => router.back()}>
+      <View style={headerStyles.containerRow}>
+        <Pressable style={headerStyles.backButton} onPress={() => router.back()}>
           <X size={24} color={colors.white} />
         </Pressable>
-        <Text style={styles.headerTitle}>Exercise Info</Text>
-        <View style={styles.headerSpacer} />
+        <Text style={typography.sectionTitle}>Exercise Info</Text>
+        <View style={headerStyles.placeholder} />
       </View>
 
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={layout.scroll} showsVerticalScrollIndicator={false}>
         {/* Exercise Name */}
-        <Text style={styles.exerciseName}>{exercise.name}</Text>
+        <Text style={typography.pageTitle}>{exercise.name}</Text>
 
         {/* Tags */}
         <View style={styles.tags}>
@@ -165,37 +159,39 @@ export default function ExerciseDetailScreen() {
 
         {/* Description */}
         {exercise.description && (
-          <View style={styles.descriptionCard}>
+          <View style={[card.base, styles.descriptionCard]}>
             <Text style={styles.descriptionText}>{exercise.description}</Text>
           </View>
         )}
 
         {/* Personal Record */}
         {personalRecord && (
-          <View style={styles.prCard}>
-            <View style={styles.prHeader}>
+          <View style={[card.large, styles.prCard]}>
+            <View style={[layout.row, layout.gapSm]}>
               <TrendingUp size={20} color={colors.emerald500} />
               <Text style={styles.prTitle}>Personal Record</Text>
             </View>
             <View style={styles.prStats}>
               <View style={styles.prStat}>
                 <Text style={styles.prValue}>{personalRecord.weight} kg</Text>
-                <Text style={styles.prLabel}>Weight</Text>
+                <Text style={typography.caption}>Weight</Text>
               </View>
               <View style={styles.prDivider} />
               <View style={styles.prStat}>
                 <Text style={styles.prValue}>{personalRecord.reps}</Text>
-                <Text style={styles.prLabel}>Reps</Text>
+                <Text style={typography.caption}>Reps</Text>
               </View>
             </View>
-            <Text style={styles.prDate}>Set on {formatFullDate(personalRecord.date)}</Text>
+            <Text style={[typography.caption, { textAlign: "center" }]}>
+              Set on {formatFullDate(personalRecord.date)}
+            </Text>
           </View>
         )}
 
         {/* Instructions */}
         {hasInstructions && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Instructions</Text>
+            <Text style={typography.sectionTitle}>Instructions</Text>
             {instructions.map((instruction, index) => (
               <View key={index} style={styles.instructionItem}>
                 <View style={styles.instructionNumber}>
@@ -210,7 +206,7 @@ export default function ExerciseDetailScreen() {
         {/* History */}
         {hasHistory && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recent History</Text>
+            <Text style={typography.sectionTitle}>Recent History</Text>
             <View style={styles.historyHeader}>
               <Text style={styles.historyHeaderText}>Date</Text>
               <Text style={styles.historyHeaderText}>Sets</Text>
@@ -218,7 +214,7 @@ export default function ExerciseDetailScreen() {
               <Text style={styles.historyHeaderText}>Volume</Text>
             </View>
             {history.map((entry, index) => (
-              <View key={index} style={styles.historyItem}>
+              <View key={index} style={[card.base, styles.historyItem]}>
                 <Text style={styles.historyDate}>{formatDate(entry.date)}</Text>
                 <Text style={styles.historySets}>
                   {entry.sets}×{Math.round(entry.totalReps / entry.sets)}
@@ -230,11 +226,11 @@ export default function ExerciseDetailScreen() {
           </View>
         )}
 
-        {/* Empty state for no history */}
+        {/* Empty state */}
         {!hasHistory && !personalRecord && (
-          <View style={styles.emptyHistoryCard}>
+          <View style={[card.large, styles.emptyHistoryCard]}>
             <Text style={styles.emptyHistoryTitle}>No History Yet</Text>
-            <Text style={styles.emptyHistoryText}>
+            <Text style={typography.bodySm}>
               Complete workouts with this exercise to track your progress and set personal records.
             </Text>
           </View>
@@ -247,81 +243,29 @@ export default function ExerciseDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.black,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.zinc900,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.white,
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.md,
-  },
-  loadingText: {
-    fontSize: fontSize.base,
-    color: colors.zinc400,
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.xl,
-    gap: spacing.md,
-  },
   errorText: {
     fontSize: fontSize.base,
     color: colors.error,
     textAlign: "center",
+    marginTop: spacing.md,
   },
   retryButton: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     backgroundColor: colors.zinc900,
     borderRadius: radius.md,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
   retryButtonText: {
     fontSize: fontSize.base,
     color: colors.white,
     fontWeight: fontWeight.medium,
   },
-  scroll: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  exerciseName: {
-    fontSize: fontSize["3xl"],
-    fontWeight: fontWeight.bold,
-    color: colors.white,
-    marginBottom: spacing.md,
-  },
   tags: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
+    marginTop: spacing.md,
     marginBottom: spacing.lg,
   },
   tag: {
@@ -345,11 +289,6 @@ const styles = StyleSheet.create({
     color: colors.emerald400,
   },
   descriptionCard: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
     marginBottom: spacing.lg,
   },
   descriptionText: {
@@ -358,18 +297,8 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   prCard: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    borderWidth: 1,
     borderColor: colors.emerald500,
     marginBottom: spacing.lg,
-  },
-  prHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: spacing.md,
   },
   prTitle: {
     fontSize: fontSize.base,
@@ -380,7 +309,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: spacing.xl,
-    marginBottom: spacing.sm,
+    marginVertical: spacing.md,
   },
   prStat: {
     alignItems: "center",
@@ -390,32 +319,16 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.white,
   },
-  prLabel: {
-    fontSize: fontSize.xs,
-    color: colors.zinc500,
-    marginTop: 2,
-  },
   prDivider: {
     width: 1,
     backgroundColor: colors.zinc700,
   },
-  prDate: {
-    fontSize: fontSize.xs,
-    color: colors.zinc500,
-    textAlign: "center",
-  },
   section: {
     marginBottom: spacing.xl,
   },
-  sectionTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.white,
-    marginBottom: spacing.md,
-  },
   instructionItem: {
     flexDirection: "row",
-    marginBottom: spacing.md,
+    marginTop: spacing.md,
   },
   instructionNumber: {
     width: 28,
@@ -453,12 +366,7 @@ const styles = StyleSheet.create({
   historyItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.zinc900,
-    padding: spacing.md,
-    borderRadius: radius.lg,
     marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.zinc800,
   },
   historyDate: {
     flex: 1,
@@ -482,24 +390,13 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   emptyHistoryCard: {
-    backgroundColor: colors.zinc900,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.zinc800,
   },
   emptyHistoryTitle: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
     color: colors.white,
     marginBottom: spacing.sm,
-  },
-  emptyHistoryText: {
-    fontSize: fontSize.sm,
-    color: colors.zinc500,
-    textAlign: "center",
-    lineHeight: 20,
   },
   bottomSpacer: {
     height: spacing.xl,

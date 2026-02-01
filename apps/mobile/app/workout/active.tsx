@@ -759,7 +759,7 @@ export default function ActiveWorkoutScreen() {
                             isCompleted && styles.setCheckButtonCompleted,
                           ]}
                           onPress={() =>
-                            handleSetComplete(set.id, currentExercise.exercise_id, exerciseType, set.rest_seconds)
+                            handleSetComplete(set.id, currentExercise.exercise_id, exerciseType, set.rest_seconds ?? undefined)
                           }
                           disabled={isSaving}
                         >

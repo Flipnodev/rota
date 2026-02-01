@@ -102,7 +102,8 @@ export function useActiveProgram(): UseActiveProgramReturn {
       }
 
       if (data) {
-        setActiveProgram(data as ActiveProgramData);
+        const programData = data as unknown as ActiveProgramData;
+        setActiveProgram(programData);
 
         // Fetch workouts for this program
         const { data: workoutsData, error: workoutsError } = await supabase
@@ -115,7 +116,7 @@ export function useActiveProgram(): UseActiveProgramReturn {
               sets:exercise_sets(*)
             )
           `)
-          .eq("program_id", data.program.id)
+          .eq("program_id", programData.program.id)
           .eq("week_number", 1)
           .order("day_of_week", { ascending: true });
 
@@ -147,7 +148,7 @@ export function useActiveProgram(): UseActiveProgramReturn {
           .from("workout_logs")
           .select("workout_id")
           .eq("user_id", user.id)
-          .eq("program_id", data.program.id)
+          .eq("program_id", programData.program.id)
           .not("completed_at", "is", null)
           .gte("started_at", startOfDay)
           .lt("started_at", endOfDay);
@@ -175,19 +176,20 @@ export function useActiveProgram(): UseActiveProgramReturn {
       try {
         const { data, error: rpcError } = await supabase.rpc("start_program", {
           p_program_id: programId,
-        });
+        } as { p_program_id: string });
 
         if (rpcError) {
           return { success: false, error: rpcError.message };
         }
 
-        if (data?.success) {
+        const result = data as { success: boolean; program_id?: string; error?: string } | null;
+        if (result?.success) {
           // Refetch to update state
           await fetchActiveProgram();
-          return { success: true, programId: data.program_id };
+          return { success: true, programId: result.program_id };
         }
 
-        return { success: false, error: data?.error || "Unknown error" };
+        return { success: false, error: result?.error || "Unknown error" };
       } catch (err) {
         return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
       }

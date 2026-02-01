@@ -607,6 +607,7 @@ export function useProgramEditor(): UseProgramEditorReturn {
         return { success: true, programId: program.id };
       } else {
         // Update existing program
+        const programId = programDraft.id!; // Must exist for updates
         const { error: updateError } = await supabase
           .from("programs")
           .update({
@@ -618,7 +619,7 @@ export function useProgramEditor(): UseProgramEditorReturn {
             goal: programDraft.goal,
             equipment: programDraft.equipment,
           })
-          .eq("id", programDraft.id)
+          .eq("id", programId)
           .eq("user_id", user.id);
 
         if (updateError) throw new Error(updateError.message);
@@ -627,7 +628,7 @@ export function useProgramEditor(): UseProgramEditorReturn {
         const { error: deleteError } = await supabase
           .from("workouts")
           .delete()
-          .eq("program_id", programDraft.id);
+          .eq("program_id", programId);
 
         if (deleteError) throw new Error(deleteError.message);
 
@@ -636,7 +637,7 @@ export function useProgramEditor(): UseProgramEditorReturn {
           const { data: createdWorkout, error: workoutError } = await supabase
             .from("workouts")
             .insert({
-              program_id: programDraft.id,
+              program_id: programId,
               name: workout.name,
               day_of_week: workout.dayOfWeek,
               week_number: workout.weekNumber,
@@ -681,7 +682,7 @@ export function useProgramEditor(): UseProgramEditorReturn {
           }
         }
 
-        return { success: true, programId: programDraft.id };
+        return { success: true, programId };
       }
     } catch (err) {
       const errorMessage =
